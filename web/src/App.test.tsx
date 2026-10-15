@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
 import { fail, goTo, mockFetch, ok } from './test-utils'
+import { THEME_KEY } from './theme'
 
 const loggedOut = ok({ owner_exists: true, authenticated: false })
 const loggedIn = ok({ owner_exists: true, authenticated: true, owner_name: 'eugene' })
@@ -125,4 +126,56 @@ test('a 401 on a private page sends the user to login', async () => {
   await waitFor(() => expect(window.location.pathname).toBe('/login'))
   expect(new URLSearchParams(window.location.search).get('next')).toBe('/projects/demo')
   expect(screen.queryByRole('button', { name: 'Выйти' })).not.toBeInTheDocument()
+})
+
+describe('theme switch', () => {
+  afterEach(() => {
+    window.localStorage.clear()
+    delete document.documentElement.dataset.theme
+  })
+
+  test('a chosen mode is applied and saved, system removes it', async () => {
+    goTo('/')
+    mockFetch({ 'GET /api/session': loggedIn, 'GET /api/projects': ok([]) })
+    const user = userEvent.setup()
+    render(<App />)
+
+    const group = await screen.findByRole('group', { name: 'Тема' })
+    expect(within(group).getByRole('radio', { name: 'Системная' })).toBeChecked()
+
+    await user.click(within(group).getByRole('radio', { name: 'Темная' }))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(window.localStorage.getItem(THEME_KEY)).toBe('dark')
+
+    await user.click(within(group).getByRole('radio', { name: 'Системная' }))
+    expect(document.documentElement).not.toHaveAttribute('data-theme')
+    expect(window.localStorage.getItem(THEME_KEY)).toBeNull()
+  })
+
+  test('the saved mode is checked', async () => {
+    window.localStorage.setItem(THEME_KEY, 'light')
+    goTo('/')
+    mockFetch({ 'GET /api/session': loggedIn, 'GET /api/projects': ok([]) })
+    render(<App />)
+
+    expect(await screen.findByRole('radio', { name: 'Светлая' })).toBeChecked()
+  })
+
+  test('the login page keeps the chosen mode after logout', async () => {
+    goTo('/')
+    mockFetch({
+      'GET /api/session': loggedIn,
+      'GET /api/projects': ok([]),
+      'POST /api/logout': ok({ authenticated: false }),
+    })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('radio', { name: 'Темная' }))
+    await user.click(screen.getByRole('button', { name: 'Выйти' }))
+
+    expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Тема' })).not.toBeInTheDocument()
+    expect(document.documentElement.dataset.theme).toBe('dark')
+  })
 })

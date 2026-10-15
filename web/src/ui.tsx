@@ -40,8 +40,28 @@ export function stateLabel(state: TargetState): string {
   return stateLabels[state] ?? state
 }
 
+// The signal color of a lamp: ok, wait and err are states, neutral is an event
+// without a state, off is a disabled target.
+export type LampTone = 'ok' | 'wait' | 'err' | 'neutral' | 'off'
+
+const stateTones: Record<TargetState, LampTone> = {
+  synced: 'ok',
+  pending: 'wait',
+  error: 'err',
+}
+
+export function stateTone(state: TargetState): LampTone {
+  return stateTones[state] ?? 'neutral'
+}
+
+// Lamp only repeats a state that is also written next to it, so it is hidden
+// from assistive technologies.
+export function Lamp({ tone, title }: { tone: LampTone; title?: string }) {
+  return <span className={`lamp lamp-${tone}`} title={title} aria-hidden="true" />
+}
+
 export function StateBadge({ state }: { state: TargetState }) {
-  return <span className={`badge badge-${state}`}>{stateLabel(state)}</span>
+  return <span className={`state state-${state}`}>{stateLabel(state)}</span>
 }
 
 const authKindLabels: Record<AuthKind, string> = {

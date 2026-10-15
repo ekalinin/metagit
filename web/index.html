@@ -3,7 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>metagit</title>
+    <script>
+      // Apply the saved theme before the first paint, see src/theme.ts.
+      try {
+        var mode = localStorage.getItem('metagit.theme')
+        if (mode === 'light' || mode === 'dark') document.documentElement.dataset.theme = mode
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
