@@ -1,0 +1,626 @@
+/*
+ * metagit landing page. It follows the web console: the colors are copied
+ * from web/src/style.css, the fonts are the latin files of the
+ * @fontsource-variable packages used by web/. Color means state: only the
+ * signal lamps are colored.
+ */
+
+@font-face {
+  font-family: 'Golos Text Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url(fonts/golos-text-latin-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Martian Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  font-stretch: 75% 112.5%;
+  src: url(fonts/martian-mono-latin-standard-normal.woff2) format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Tokens. The theme follows the OS: color-scheme "light dark" lets
+   light-dark() pick a side. */
+
+:root {
+  color-scheme: light dark;
+  --panel: light-dark(#e6eae4, #0f1311);
+  --surface: light-dark(#f4f6f2, #161b18);
+  --ink: light-dark(#1a201d, #d9e0da);
+  --graphite: light-dark(#56615a, #8d9a92);
+  --hairline: light-dark(#c9d0c8, #28302b);
+  --signal-ok: light-dark(#1f8a4f, #4cc38a);
+  --signal-wait: light-dark(#ad7a00, #f0b429);
+  --signal-err: light-dark(#c8372d, #ff5a4e);
+  /* Lamps have a dark rim on the light enamel and glow on the dark panel. */
+  --lamp-rim: light-dark(rgb(26 32 29 / 0.35), transparent);
+  --lamp-halo: light-dark(transparent, currentColor);
+
+  --font-text: 'Golos Text Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Martian Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --data-size: 0.8125rem;
+  --line: 2px;
+
+  color: var(--ink);
+  background: var(--panel);
+  font-family: var(--font-text);
+  line-height: 1.5;
+}
+
+/* Browsers without light-dark() get the light theme instead of no colors. */
+@supports not (color: light-dark(#000, #fff)) {
+  :root {
+    --panel: #e6eae4;
+    --surface: #f4f6f2;
+    --ink: #1a201d;
+    --graphite: #56615a;
+    --hairline: #c9d0c8;
+    --signal-ok: #1f8a4f;
+    --signal-wait: #ad7a00;
+    --signal-err: #c8372d;
+    --lamp-rim: rgb(26 32 29 / 0.35);
+    --lamp-halo: transparent;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+/* Typography. Martian Mono has two roles told apart by width:
+   data (narrow) and display (wide). */
+
+h1,
+.brand {
+  font-family: var(--font-mono);
+  font-stretch: 112.5%;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 1.25rem;
+}
+
+p,
+ul,
+ol {
+  margin: 0 0 1rem;
+}
+
+a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--graphite);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-color: var(--ink);
+  text-decoration-thickness: 2px;
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+  font-stretch: 75%;
+  font-weight: 400;
+}
+
+code {
+  font-size: 0.875em;
+  overflow-wrap: anywhere;
+}
+
+pre {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-size: var(--data-size);
+  line-height: 1.6;
+  background: var(--panel);
+  border-radius: 3px;
+}
+
+pre code {
+  font-size: inherit;
+  overflow-wrap: normal;
+}
+
+code.nowrap {
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--graphite);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Layout */
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.topbar-inner {
+  min-height: 3.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 2rem;
+  padding-block: 0.5rem;
+}
+
+.brand {
+  font-size: 1.15rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.topbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin-left: auto;
+}
+
+.topbar nav a {
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.topbar nav a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+/* Sections are panels on the page background, as in the console. */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  padding: 2rem 2.25rem;
+  margin-bottom: 1.5rem;
+  scroll-margin-top: 1rem;
+}
+
+.panel > :last-child {
+  margin-bottom: 0;
+}
+
+.panel ul,
+.panel ol {
+  padding-left: 1.25rem;
+}
+
+.panel li + li {
+  margin-top: 0.5rem;
+}
+
+/* First screen: the wordmark and what metagit is on one side, a push and its
+   delivery lines on the other. */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 2.5rem 3.5rem;
+  align-items: center;
+  padding-block: 4rem 3.5rem;
+}
+
+.hero h1 {
+  font-size: clamp(3rem, 1.6rem + 5vw, 5.25rem);
+  margin: 0 0 1.5rem;
+}
+
+.lede {
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.hero-text > p:not(.lede):not(.actions) {
+  color: var(--graphite);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.75rem 0 0;
+}
+
+.button {
+  display: inline-block;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.button:hover {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  border-color: var(--graphite);
+}
+
+.button.primary {
+  background: var(--ink);
+  border-color: transparent;
+  color: var(--surface);
+}
+
+.button.primary:hover {
+  background: color-mix(in srgb, var(--ink) 82%, var(--surface));
+}
+
+/* Delivery lines: the push is the source of a trunk that branches into every
+   hosting. The line repeats the state: solid - delivered, running dashes -
+   queued, broken - error. The state is always written next to the lamp. */
+
+.lines {
+  --gutter: 8.5rem;
+  --trunk-x: 1.5rem;
+  /* The middle of the first text line: the row padding plus half a line. */
+  --branch-y: calc(1rem + 0.84375rem);
+  --lamp: 14px;
+  --lamp-gap: 0.85rem;
+  font-size: 1.125rem;
+}
+
+.lines-source {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  font-family: var(--font-mono);
+  font-stretch: 75%;
+  font-size: 1.0625rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+}
+
+.lines-source .prompt {
+  color: var(--graphite);
+  margin-right: 0.6em;
+}
+
+.lines ul {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0 0;
+}
+
+/* The trunk between the push and the first branch. */
+.lines ul::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  height: 0.5rem;
+  left: var(--trunk-x);
+  border-left: var(--line) solid var(--graphite);
+}
+
+.lines li {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 1rem;
+  padding: 1rem 0 1rem var(--gutter);
+}
+
+/* The trunk segment of a row, cut at the branch in the last row. */
+.lines li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--trunk-x);
+  border-left: var(--line) solid var(--graphite);
+}
+
+.lines li:last-child::before {
+  bottom: auto;
+  height: calc(var(--branch-y) + var(--line) / 2);
+}
+
+/* The branch from the trunk to the lamp. */
+.lines li::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--branch-y) - var(--line) / 2);
+  left: var(--trunk-x);
+  width: calc(var(--gutter) - var(--trunk-x) - var(--lamp-gap) - var(--lamp));
+  height: var(--line);
+  background: var(--graphite);
+}
+
+.lines .lamp {
+  position: absolute;
+  top: calc(var(--branch-y) - var(--lamp) / 2);
+  left: calc(var(--gutter) - var(--lamp-gap) - var(--lamp));
+}
+
+.lines .target {
+  font-weight: 600;
+}
+
+.lines .state {
+  color: var(--graphite);
+}
+
+/* Queued: the dashes run toward the lamp. */
+.lines li.queued::after {
+  background: repeating-linear-gradient(90deg, var(--graphite) 0 6px, transparent 6px 11px);
+  background-size: 11px var(--line);
+  animation: line-run 1.2s linear infinite;
+}
+
+@keyframes line-run {
+  to {
+    background-position: 11px 0;
+  }
+}
+
+/* Error: the branch is broken before the lamp. */
+.lines li.failed::after {
+  width: calc(var(--gutter) - var(--trunk-x) - var(--lamp-gap) - var(--lamp) - 1.4rem);
+}
+
+.line-break {
+  position: absolute;
+  top: calc(var(--branch-y) - 5px);
+  left: calc(var(--gutter) - var(--lamp-gap) - var(--lamp) - 1.05rem);
+  width: 10px;
+  height: 10px;
+}
+
+.line-break::before,
+.line-break::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  height: 12px;
+  border-left: var(--line) solid var(--signal-err);
+  transform: rotate(45deg);
+}
+
+.line-break::after {
+  transform: rotate(-45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lines li.queued::after {
+    animation: none;
+  }
+}
+
+.lamp {
+  display: inline-block;
+  width: var(--lamp, 10px);
+  height: var(--lamp, 10px);
+  border-radius: 50%;
+  color: var(--graphite);
+  background: currentColor;
+  box-shadow:
+    0 0 0 1px var(--lamp-rim),
+    0 0 6px 1px var(--lamp-halo);
+}
+
+.lamp-ok {
+  color: var(--signal-ok);
+}
+
+.lamp-wait {
+  color: var(--signal-wait);
+}
+
+.lamp-err {
+  color: var(--signal-err);
+}
+
+/* How it works: one fact per row, the short statement on the left. */
+
+.facts {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  margin: 0;
+}
+
+.facts dt,
+.facts dd {
+  padding-block: 1.1rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.facts dt {
+  font-weight: 600;
+  padding-right: 2rem;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.facts dt:first-of-type,
+.facts dt:first-of-type + dd {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.facts dt:last-of-type,
+.facts dd:last-of-type {
+  padding-bottom: 0;
+}
+
+.facts dd > :last-child {
+  margin-bottom: 0;
+}
+
+.facts pre {
+  margin-top: 0.25rem;
+}
+
+/* Web console screenshots: the top of each page in a fixed frame. */
+
+.shot {
+  margin: 0 0 1.75rem;
+}
+
+.shot picture {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+.shot img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--frame);
+  object-fit: cover;
+  object-position: top left;
+}
+
+.shot figcaption {
+  margin-top: 0.6rem;
+  color: var(--graphite);
+}
+
+/* Quick start */
+
+.steps > li::marker {
+  font-family: var(--font-mono);
+  font-stretch: 75%;
+  font-weight: 600;
+}
+
+.steps > li + li {
+  margin-top: 1.5rem;
+}
+
+.steps h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+}
+
+.steps pre {
+  margin: 0.5rem 0 0;
+}
+
+.steps p {
+  margin: 0;
+}
+
+.steps p + p {
+  margin-top: 0.5rem;
+}
+
+/* Footer */
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.5rem;
+  padding-block: 1rem 3rem;
+  color: var(--graphite);
+}
+
+.footer .brand {
+  font-size: 1rem;
+}
+
+.footer p {
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 2.5rem;
+  }
+
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .facts dt {
+    padding-bottom: 0.25rem;
+    padding-right: 0;
+  }
+
+  .facts dd,
+  .facts dt:first-of-type + dd {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .facts dd:not(:last-of-type) {
+    padding-bottom: 1.1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .wrap {
+    padding: 0 1rem;
+  }
+
+  .topbar-inner {
+    padding-block: 0.6rem;
+  }
+
+  .topbar nav {
+    gap: 0.25rem 1.25rem;
+    margin-left: 0;
+  }
+
+  .panel {
+    padding: 1.25rem 1.1rem;
+  }
+
+  .lede {
+    font-size: 1.15rem;
+  }
+
+  .lines {
+    --gutter: 6rem;
+    --trunk-x: 1.25rem;
+  }
+}
