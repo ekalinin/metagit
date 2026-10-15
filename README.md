@@ -207,7 +207,26 @@ Git LFS, wiki, релизы, issues и pull request; несколько поль
 ```sh
 make test         # Go и веб-тесты
 make lint         # gofmt, go vet, проверка типов TypeScript
-cd web && npm run dev   # веб-интерфейс с прокси на localhost:8080
+```
+
+### Веб-интерфейс в режиме разработки
+
+`npm run dev` запускает только интерфейс (Vite, по умолчанию http://localhost:5173), а запросы к `/api` передает запущенному `metagit serve`. Поэтому сначала нужен сам сервис:
+
+```sh
+make go
+./bin/metagit owner create --name dev --data-dir ./data
+./bin/metagit serve --data-dir ./data          # API на http://localhost:8080
+
+# в другом терминале
+cd web && npm run dev
+```
+
+Если `metagit serve` слушает другой адрес, передайте его через `METAGIT_API_URL`:
+
+```sh
+./bin/metagit serve --data-dir ./data --http-addr :9000
+cd web && METAGIT_API_URL=http://localhost:9000 npm run dev
 ```
 
 Интеграционные тесты запускают настоящий git и собирают бинарник metagit. `METAGIT_TEST_LOG=1` выводит журнал сервиса в тестах.
