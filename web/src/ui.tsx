@@ -1,0 +1,73 @@
+import { cloneElement, useId, type ReactElement, type ReactNode } from 'react'
+import type { AuthKind, TargetState } from './api'
+
+interface FieldProps {
+  label: string
+  hint?: ReactNode
+  children: ReactElement<{ id?: string; 'aria-describedby'?: string }>
+}
+
+// Field renders a labelled form control with an optional hint linked to it.
+export function Field({ label, hint, children }: FieldProps) {
+  const id = useId()
+  const hintId = hint ? id + '-hint' : undefined
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      {cloneElement(children, { id, 'aria-describedby': hintId })}
+      {hint && (
+        <span id={hintId} className="hint">
+          {hint}
+        </span>
+      )}
+    </div>
+  )
+}
+
+export function formatTime(value?: string): string {
+  if (!value) return ''
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString('ru-RU')
+}
+
+const stateLabels: Record<TargetState, string> = {
+  synced: 'синхронизирован',
+  pending: 'ожидает',
+  error: 'ошибка',
+}
+
+export function stateLabel(state: TargetState): string {
+  return stateLabels[state] ?? state
+}
+
+export function StateBadge({ state }: { state: TargetState }) {
+  return <span className={`badge badge-${state}`}>{stateLabel(state)}</span>
+}
+
+const authKindLabels: Record<AuthKind, string> = {
+  none: 'без учетных данных',
+  https: 'HTTPS: логин и токен',
+  ssh: 'SSH: приватный ключ',
+}
+
+export function authKindLabel(kind: AuthKind): string {
+  return authKindLabels[kind] ?? kind
+}
+
+export function ErrorMessage({ text }: { text: string }) {
+  if (!text) return null
+  return (
+    <p className="message message-error" role="alert">
+      {text}
+    </p>
+  )
+}
+
+export function Notice({ text }: { text: string }) {
+  if (!text) return null
+  return (
+    <p className="message message-ok" role="status">
+      {text}
+    </p>
+  )
+}

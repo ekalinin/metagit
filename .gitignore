@@ -1,0 +1,5 @@
+/bin/
+/data/
+web/node_modules/
+internal/webui/dist/app/
+web/coverage/
