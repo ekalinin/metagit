@@ -67,6 +67,7 @@ export function ProtectedRefs({ project, refs, reload }: Props) {
       >
         <Field label="Шаблон" hint="Например: refs/heads/main или refs/tags/*">
           <input
+            className="mono"
             value={pattern}
             required
             spellCheck={false}

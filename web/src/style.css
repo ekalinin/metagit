@@ -1,27 +1,71 @@
+/*
+ * Tokens. Colors come in light/dark pairs: "system" mode leaves color-scheme
+ * as "light dark" so light-dark() follows the OS; data-theme pins one side.
+ * Color means state: only signals and destructive actions are colored.
+ */
+
 :root {
-  --text: #1f2328;
-  --muted: #59636e;
-  --border: #d1d9e0;
-  --bg: #f6f8fa;
-  --card: #ffffff;
-  --accent: #0969da;
-  --accent-hover: #0757b8;
-  --danger: #cf222e;
-  --danger-hover: #a40e26;
-  --code-bg: #eff2f5;
-  --ok-bg: #dafbe1;
-  --ok-text: #116329;
-  --warn-bg: #fff8c5;
-  --warn-text: #7d4e00;
-  --err-bg: #ffebe9;
-  --err-text: #a40e26;
-  --gray-bg: #eaeef2;
-  --gray-text: #424a53;
-  color: var(--text);
-  background: var(--bg);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light dark;
+  --panel: light-dark(#e6eae4, #0f1311);
+  --surface: light-dark(#f4f6f2, #161b18);
+  --ink: light-dark(#1a201d, #d9e0da);
+  --graphite: light-dark(#56615a, #8d9a92);
+  --hairline: light-dark(#c9d0c8, #28302b);
+  --signal-ok: light-dark(#1f8a4f, #4cc38a);
+  --signal-wait: light-dark(#ad7a00, #f0b429);
+  --signal-err: light-dark(#c8372d, #ff5a4e);
+  --err-text: light-dark(#a8281f, #ff8a80);
+  --ok-text: light-dark(#17693c, #7ad9a5);
+  --wait-text: light-dark(#7a5300, #f5c862);
+  --on-signal: light-dark(#ffffff, #160b09);
+  /* Lamps have a dark rim on the light enamel and glow on the dark panel. */
+  --lamp-rim: light-dark(rgb(26 32 29 / 0.35), transparent);
+  --lamp-halo: light-dark(transparent, currentColor);
+
+  --font-text: 'Golos Text Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Martian Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --data-size: 0.8125rem;
+  --line: 2px;
+  /* Delivery lines: the gutter width, the trunk position, the branch height
+     and the gap between the lamp and the gutter edge. */
+  --gutter: 4.5rem;
+  --trunk-x: 0.9rem;
+  --branch-y: 1.35rem;
+  --lamp-gap: 0.6rem;
+
+  color: var(--ink);
+  background: var(--panel);
+  font-family: var(--font-text);
   font-size: 15px;
   line-height: 1.5;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* Browsers without light-dark() get the light theme instead of no colors. */
+@supports not (color: light-dark(#000, #fff)) {
+  :root {
+    --panel: #e6eae4;
+    --surface: #f4f6f2;
+    --ink: #1a201d;
+    --graphite: #56615a;
+    --hairline: #c9d0c8;
+    --signal-ok: #1f8a4f;
+    --signal-wait: #ad7a00;
+    --signal-err: #c8372d;
+    --err-text: #a8281f;
+    --ok-text: #17693c;
+    --wait-text: #7a5300;
+    --on-signal: #ffffff;
+    --lamp-rim: rgb(26 32 29 / 0.35);
+    --lamp-halo: transparent;
+  }
 }
 
 * {
@@ -32,18 +76,33 @@ body {
   margin: 0;
 }
 
+/* Typography. Martian Mono has two roles told apart by width:
+   data (narrow) and display (wide). */
+
+h1,
+.brand {
+  font-family: var(--font-mono);
+  font-stretch: 112.5%;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
 h1 {
   font-size: 1.6rem;
-  margin: 0 0 1rem;
+  margin: 0 0 1.25rem;
 }
 
 h2 {
   font-size: 1.2rem;
-  margin: 0 0 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 0.5rem;
 }
 
 h3 {
-  font-size: 1.05rem;
+  font-size: 1rem;
+  font-weight: 600;
   margin: 0 0 0.75rem;
 }
 
@@ -52,128 +111,206 @@ p {
 }
 
 a {
-  color: var(--accent);
-  text-decoration: none;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--graphite);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
 }
 
 a:hover {
-  text-decoration: underline;
+  text-decoration-color: var(--ink);
+  text-decoration-thickness: 2px;
 }
 
 code,
-pre {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.88em;
+pre,
+.mono {
+  font-family: var(--font-mono);
+  font-stretch: 75%;
+  font-size: var(--data-size);
+  font-weight: 400;
 }
 
 code {
-  background: var(--code-bg);
-  border-radius: 4px;
-  padding: 0.1em 0.35em;
   overflow-wrap: anywhere;
   user-select: all;
 }
 
 code.block {
   display: block;
-  padding: 0.5em 0.75em;
   margin: 0.25rem 0;
+  padding: 0.5em 0.75em;
   white-space: pre-wrap;
+  background: var(--panel);
+  border-radius: 3px;
 }
 
 pre {
-  background: var(--code-bg);
-  border-radius: 6px;
+  margin: 0 0 0.75rem;
   padding: 0.75rem 1rem;
   overflow-x: auto;
+  background: var(--panel);
+  border-radius: 3px;
 }
 
 pre code {
-  background: none;
+  font-size: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
   padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Layout */
 
 .topbar {
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
 }
 
 .topbar-inner {
-  max-width: 1280px;
+  max-width: 1200px;
+  min-height: 3.25rem;
   margin: 0 auto;
-  padding: 0.6rem 1.5rem;
+  padding: 0.5rem 1.5rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .brand {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--text);
+  font-size: 1.15rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.brand:hover {
+  text-decoration: none;
 }
 
 .topnav {
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
   flex: 1;
 }
 
 .topnav a {
-  color: var(--muted);
+  color: var(--graphite);
+  font-weight: 500;
+  text-decoration: none;
   padding: 0.25rem 0;
   border-bottom: 2px solid transparent;
 }
 
 .topnav a[aria-current='page'] {
-  color: var(--text);
-  border-bottom-color: var(--accent);
+  color: var(--ink);
+  border-bottom-color: var(--ink);
 }
 
 .topnav a:hover {
-  color: var(--text);
-  text-decoration: none;
+  color: var(--ink);
 }
 
 .topbar-user {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .topbar-error {
-  max-width: 1280px;
+  max-width: 1200px;
   margin: 0 auto 0.5rem;
 }
 
+.theme-switch {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+}
+
+.theme-switch label {
+  position: relative;
+  display: block;
+}
+
+.theme-switch input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.theme-switch span {
+  display: block;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8125rem;
+  color: var(--graphite);
+}
+
+.theme-switch label + label span {
+  border-left: 1px solid var(--hairline);
+}
+
+.theme-switch input:checked + span {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.theme-switch input:hover:not(:checked) + span {
+  color: var(--ink);
+}
+
+.theme-switch input:focus-visible + span {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 .page {
-  max-width: 1280px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 2rem 1.5rem 4rem;
 }
 
 .loading {
   padding: 2rem;
-  color: var(--muted);
+  color: var(--graphite);
 }
 
 .breadcrumbs {
-  color: var(--muted);
-  margin-bottom: 0.25rem;
+  color: var(--graphite);
+  font-size: 0.8125rem;
+  margin-bottom: 0.35rem;
 }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
-.card .card {
-  border-style: dashed;
+/* A form opened inside a section sits in a recessed well. */
+.card .card,
+.targets .card {
+  background: var(--panel);
   margin: 1rem 0 0;
 }
 
@@ -197,10 +334,21 @@ pre code {
 .login-card {
   width: 100%;
   max-width: 420px;
+  padding: 2rem;
 }
 
 .login-card .brand {
-  margin-bottom: 0.25rem;
+  font-size: 1.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.login-card h1 {
+  font-family: var(--font-text);
+  font-stretch: 100%;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-bottom: 1rem;
 }
 
 .login-card button[type='submit'] {
@@ -223,15 +371,17 @@ th,
 td {
   text-align: left;
   vertical-align: top;
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--hairline);
 }
 
 th {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--graphite);
   white-space: nowrap;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 tbody tr:last-child td {
@@ -239,16 +389,20 @@ tbody tr:last-child td {
 }
 
 td.actions {
-  white-space: nowrap;
   text-align: right;
+  min-width: 9rem;
 }
 
-td.actions button + button {
-  margin-left: 0.35rem;
+.targets-table td.actions {
+  min-width: 15.5rem;
+}
+
+td.actions button {
+  margin: 0 0 0.35rem 0.35rem;
 }
 
 .disabled-row td {
-  color: var(--muted);
+  color: var(--graphite);
 }
 
 .nowrap {
@@ -261,74 +415,297 @@ td.actions button + button {
   min-width: 16rem;
 }
 
+/* Refs have no spaces: without a minimum width they break every few letters. */
+td.ref {
+  min-width: 12rem;
+}
+
+.clone-line {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
 .clone-line + .clone-line {
   margin-top: 0.25rem;
+}
+
+.clone-line > .muted {
+  min-width: 3.5rem;
 }
 
 dl.clone {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.5rem 1rem;
+  align-items: baseline;
+  gap: 0.4rem 1.25rem;
   margin: 0;
 }
 
 dl.clone dt {
-  color: var(--muted);
-  font-weight: 600;
+  color: var(--graphite);
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 dl.clone dd {
   margin: 0;
 }
 
-.summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
+.target-url {
+  display: inline-block;
+  min-width: 11rem;
+  overflow-wrap: anywhere;
 }
 
 .target-error {
   color: var(--err-text);
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   margin-top: 0.3rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  min-width: 14rem;
   max-width: 28rem;
 }
 
-/* Badges */
+/* Lamps: one per target state or event kind. The text label always sits next
+   to the lamp, the lamp only repeats it. */
 
-.badge {
+.lamp {
   display: inline-block;
-  padding: 0.1rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  color: var(--graphite);
+  background: currentColor;
+  box-shadow:
+    0 0 0 1px var(--lamp-rim),
+    0 0 6px 1px var(--lamp-halo);
+}
+
+.lamp-ok {
+  color: var(--signal-ok);
+}
+
+.lamp-wait {
+  color: var(--signal-wait);
+}
+
+.lamp-err {
+  color: var(--signal-err);
+}
+
+.lamp-neutral {
+  box-shadow: none;
+}
+
+/* A disabled target: the lamp is out. */
+.lamp-off {
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1.5px var(--graphite);
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
   white-space: nowrap;
-  background: var(--gray-bg);
-  color: var(--gray-text);
 }
 
-.badge-synced {
-  background: var(--ok-bg);
-  color: var(--ok-text);
+/* Projects list: a short line with a lamp for every target. */
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.85rem;
 }
 
-.badge-pending {
-  background: var(--warn-bg);
-  color: var(--warn-text);
+.lamp-strip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.9rem;
 }
 
-.badge-error,
-.badge-event-delivery_error {
-  background: var(--err-bg);
+.lamp-strip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  margin-top: calc(var(--line) / -2);
+  border-top: var(--line) solid var(--graphite);
+}
+
+.lamp-strip .lamp {
+  position: relative;
+}
+
+.count {
+  font-size: 0.8125rem;
+  color: var(--graphite);
+  white-space: nowrap;
+}
+
+.count-error {
   color: var(--err-text);
+  font-weight: 500;
 }
 
-.badge-event-diverged {
-  background: var(--warn-bg);
-  color: var(--warn-text);
+/* Project page: clone addresses are the source of a trunk that branches into
+   every target row. The trunk runs in a left gutter shared by the source
+   plate, the targets header and the first cell of every table row. */
+
+.project-name {
+  font-size: 2.1rem;
+  margin-bottom: 1.5rem;
+  overflow-wrap: anywhere;
+}
+
+.card.source {
+  margin-bottom: 0;
+}
+
+.targets {
+  margin-bottom: 2rem;
+}
+
+.track-head {
+  position: relative;
+  display: flow-root;
+  padding: 1.25rem 0 0.25rem var(--gutter);
+}
+
+.track-head::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--trunk-x);
+  border-left: var(--line) solid var(--graphite);
+}
+
+/* No targets: the trunk ends in a buffer stop. */
+.track-head.dead-end::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--trunk-x) - 0.4rem + var(--line) / 2);
+  width: 0.8rem;
+  border-top: var(--line) solid var(--graphite);
+}
+
+.track-head.dead-end {
+  padding-bottom: 0;
+  margin-bottom: 1rem;
+}
+
+.track-head.dead-end > :last-child {
+  margin-bottom: 0;
+}
+
+.targets-table th {
+  white-space: normal;
+}
+
+.targets-table td.strong {
+  white-space: nowrap;
+}
+
+.targets-table .track {
+  position: relative;
+  width: var(--gutter);
+  min-width: var(--gutter);
+  padding: 0;
+  border-bottom-color: transparent;
+}
+
+/* The trunk segment of a row, cut at the branch in the last row. */
+.targets-table .track::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: var(--trunk-x);
+  border-left: var(--line) solid var(--graphite);
+}
+
+.targets-table tbody tr:last-child .track::before {
+  bottom: auto;
+  height: calc(var(--branch-y) + 1px + var(--line) / 2);
+}
+
+/* The branch from the trunk to the lamp. */
+.targets-table td.track::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--branch-y) - var(--line) / 2);
+  left: var(--trunk-x);
+  right: calc(var(--lamp-gap) + 10px);
+  height: var(--line);
+  background: var(--graphite);
+}
+
+.targets-table td.track .lamp {
+  position: absolute;
+  top: calc(var(--branch-y) - 5px);
+  right: var(--lamp-gap);
+}
+
+/* Delivery on its way: the dashes run toward the lamp. */
+.targets-table td.track-pending::after {
+  background: repeating-linear-gradient(90deg, var(--graphite) 0 5px, transparent 5px 9px);
+  background-size: 9px var(--line);
+  animation: track-run 1.2s linear infinite;
+}
+
+@keyframes track-run {
+  to {
+    background-position: 9px 0;
+  }
+}
+
+/* Delivery failed: the branch is broken before the lamp. */
+.targets-table td.track-error::after {
+  right: calc(var(--lamp-gap) + 10px + 1.15rem);
+}
+
+.track-break {
+  position: absolute;
+  top: calc(var(--branch-y) - 4px);
+  right: calc(var(--lamp-gap) + 10px + 0.3rem);
+  width: 8px;
+  height: 8px;
+}
+
+.track-break::before,
+.track-break::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  height: 10px;
+  border-left: var(--line) solid var(--signal-err);
+  transform: rotate(45deg);
+}
+
+.track-break::after {
+  transform: rotate(-45deg);
+}
+
+/* Target is disabled: nothing runs on the branch. */
+.targets-table td.track-off::after {
+  background: repeating-linear-gradient(90deg, var(--graphite) 0 2px, transparent 2px 5px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .targets-table td.track-pending::after {
+    animation: none;
+  }
 }
 
 /* Forms */
@@ -340,48 +717,61 @@ form {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.3rem;
   margin-bottom: 0.9rem;
 }
 
 .field > label {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
 }
 
 .hint {
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--graphite);
+  font-size: 0.8125rem;
 }
 
-input:not([type='checkbox']),
+input:not([type='checkbox'], [type='radio']),
 select,
 textarea {
   font: inherit;
   color: inherit;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
   padding: 0.45rem 0.6rem;
   width: 100%;
 }
 
+input.mono,
+textarea.mono {
+  font-family: var(--font-mono);
+  font-stretch: 75%;
+  font-size: var(--data-size);
+}
+
 textarea {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.85rem;
   resize: vertical;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ink);
   outline-offset: -1px;
+  border-color: var(--ink);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #8c959f;
+  color: var(--graphite);
+  opacity: 0.75;
+}
+
+input[type='checkbox'] {
+  accent-color: var(--ink);
+  width: 1rem;
+  height: 1rem;
 }
 
 .inline-form {
@@ -397,7 +787,7 @@ textarea::placeholder {
 }
 
 .inline-form button {
-  margin-top: 1.6rem;
+  margin-top: 1.55rem;
 }
 
 .grid {
@@ -421,51 +811,69 @@ textarea::placeholder {
 
 button {
   font: inherit;
+  font-size: 0.875rem;
   font-weight: 600;
+  line-height: 1.4;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 0.45rem 0.9rem;
   cursor: pointer;
-  background: var(--accent);
-  color: #ffffff;
+  background: var(--ink);
+  color: var(--surface);
 }
 
 button:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: color-mix(in srgb, var(--ink) 82%, var(--surface));
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 button.secondary {
-  background: var(--card);
-  color: var(--text);
-  border-color: var(--border);
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--hairline);
 }
 
 button.secondary:hover:not(:disabled) {
-  background: var(--bg);
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  border-color: var(--graphite);
 }
 
 button.danger {
-  background: var(--danger);
+  background: var(--signal-err);
+  color: var(--on-signal);
 }
 
 button.danger:hover:not(:disabled) {
-  background: var(--danger-hover);
+  background: color-mix(in srgb, var(--signal-err) 85%, var(--ink));
+}
+
+/* Row actions stay quiet until hovered. */
+button.danger.small {
+  background: transparent;
+  color: var(--err-text);
+  border-color: color-mix(in srgb, var(--signal-err) 50%, transparent);
+}
+
+button.danger.small:hover:not(:disabled) {
+  background: var(--signal-err);
+  color: var(--on-signal);
+  border-color: var(--signal-err);
 }
 
 button.small {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   padding: 0.25rem 0.6rem;
 }
 
 /* Messages */
 
 .message {
-  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
   padding: 0.6rem 0.8rem;
   margin: 0.75rem 0;
 }
@@ -476,34 +884,49 @@ button.small {
 }
 
 .message-error {
-  background: var(--err-bg);
   color: var(--err-text);
+  border-color: color-mix(in srgb, var(--signal-err) 45%, transparent);
+  background: color-mix(in srgb, var(--signal-err) 8%, var(--surface));
   white-space: pre-wrap;
 }
 
 .message-ok {
-  background: var(--ok-bg);
   color: var(--ok-text);
+  border-color: color-mix(in srgb, var(--signal-ok) 45%, transparent);
+  background: color-mix(in srgb, var(--signal-ok) 8%, var(--surface));
 }
 
 .message-warn {
-  background: var(--warn-bg);
-  color: var(--warn-text);
+  color: var(--wait-text);
+  border-color: color-mix(in srgb, var(--signal-wait) 55%, transparent);
+  background: color-mix(in srgb, var(--signal-wait) 9%, var(--surface));
+}
+
+.message-ok a,
+.message-warn a {
+  color: inherit;
 }
 
 .secret-once {
-  border: 1px solid var(--warn-text);
-  background: var(--warn-bg);
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
+  border: 1px solid var(--signal-wait);
+  background: color-mix(in srgb, var(--signal-wait) 9%, var(--surface));
+  border-radius: 4px;
+  padding: 0.9rem 1rem;
   margin-bottom: 1rem;
 }
 
+.secret-once code.block {
+  font-size: 0.95rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  margin: 0.5rem 0 0.75rem;
+}
+
 .danger-zone {
-  border: 1px solid var(--danger);
-  border-radius: 6px;
-  padding: 1rem;
-  background: #fffafa;
+  border: 1px solid var(--signal-err);
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  background: color-mix(in srgb, var(--signal-err) 5%, var(--surface));
   max-width: 40rem;
 }
 
@@ -518,19 +941,19 @@ button.small {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid var(--border);
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--hairline);
   max-width: 40rem;
 }
 
 /* Text helpers */
 
 .muted {
-  color: var(--muted);
+  color: var(--graphite);
 }
 
 .small {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
 }
 
 .strong {
@@ -540,36 +963,37 @@ button.small {
 @media (max-width: 720px) {
   .topbar-inner {
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.5rem 1.25rem;
     padding: 0.6rem 1rem;
   }
 
+  .topnav {
+    flex: 1 1 auto;
+  }
+
+  .topbar-user {
+    flex: 1 0 100%;
+    gap: 0.75rem;
+  }
+
+  .theme-switch span {
+    padding: 0.2rem 0.45rem;
+  }
+
   .page {
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  .card {
     padding: 1rem;
+  }
+
+  .project-name {
+    font-size: 1.6rem;
   }
 
   .inline-form button {
     margin-top: 0;
     margin-bottom: 0.9rem;
   }
-}
-
-.target-url {
-  display: inline-block;
-  min-width: 11rem;
-  overflow-wrap: anywhere;
-}
-
-/* Wide tables: let the action buttons wrap instead of pushing columns. */
-td.actions {
-  white-space: normal;
-  min-width: 9rem;
-}
-
-td.actions button {
-  margin: 0 0 0.35rem 0.35rem;
-}
-
-.target-error {
-  min-width: 14rem;
 }

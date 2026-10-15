@@ -5,6 +5,7 @@ import { ProjectPage } from './pages/ProjectPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { Link, loginPath, matchRoute, navigate, safeNext, useLocation, type Route } from './router'
+import { setThemeMode, storedThemeMode, type ThemeMode } from './theme'
 
 export function App() {
   const location = useLocation()
@@ -146,6 +147,7 @@ function Header({ route, ownerName, onLoggedOut }: HeaderProps) {
           </Link>
         </nav>
         <div className="topbar-user">
+          <ThemeSwitch />
           {ownerName && <span className="muted">{ownerName}</span>}
           <button type="button" className="secondary small" disabled={busy} onClick={() => void logout()}>
             Выйти
@@ -158,5 +160,36 @@ function Header({ route, ownerName, onLoggedOut }: HeaderProps) {
         </p>
       )}
     </header>
+  )
+}
+
+const themeModes: { mode: ThemeMode; label: string }[] = [
+  { mode: 'system', label: 'Системная' },
+  { mode: 'light', label: 'Светлая' },
+  { mode: 'dark', label: 'Темная' },
+]
+
+function ThemeSwitch() {
+  const [mode, setMode] = useState(storedThemeMode)
+
+  return (
+    <fieldset className="theme-switch">
+      <legend className="visually-hidden">Тема</legend>
+      {themeModes.map((m) => (
+        <label key={m.mode}>
+          <input
+            type="radio"
+            name="theme"
+            value={m.mode}
+            checked={mode === m.mode}
+            onChange={() => {
+              setThemeMode(m.mode)
+              setMode(m.mode)
+            }}
+          />
+          <span>{m.label}</span>
+        </label>
+      ))}
+    </fieldset>
   )
 }

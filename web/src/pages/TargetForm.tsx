@@ -71,6 +71,7 @@ export function TargetForm({ project, target, onSaved, onCancel }: Props) {
           hint="https://..., ssh://... или user@host:path. Не указывайте логин, пароль или токен в URL."
         >
           <input
+            className="mono"
             value={url}
             required
             spellCheck={false}
@@ -119,6 +120,7 @@ export function TargetForm({ project, target, onSaved, onCancel }: Props) {
       {authKind === 'ssh' && (
         <Field label="Приватный SSH-ключ" hint="Ключ без пароля.">
           <textarea
+            className="mono"
             value={secret}
             rows={6}
             autoComplete="off"

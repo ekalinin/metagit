@@ -83,7 +83,7 @@ const archive: ArchiveEntry[] = [
   },
 ]
 
-function routes(extra: Record<string, Handler> = {}, protectedRefs: ProtectedRef[] = []) {
+function routes(extra: Record<string, Handler> = {}, protectedRefs: ProtectedRef[] = [], targets = [github, bitbucket]) {
   const details = (): ProjectDetails => ({
     project: {
       name: 'demo',
@@ -91,7 +91,7 @@ function routes(extra: Record<string, Handler> = {}, protectedRefs: ProtectedRef
       http_url: 'https://git.example.com/demo.git',
       ssh_url: 'ssh://git@git.example.com:2222/demo.git',
     },
-    targets: [github, bitbucket],
+    targets,
     protected: [...protectedRefs],
   })
   return mockFetch({
@@ -120,6 +120,40 @@ test('shows clone addresses and targets with state, last error and times', async
   expect(
     within(bitbucketRow).getByText(/следующая попытка/),
   ).toHaveTextContent(new Date(bitbucket.next_attempt_at!).toLocaleString('ru-RU'))
+})
+
+test('every target row starts with a delivery line drawn for its state', async () => {
+  const gitlab: Target = { ...github, id: 3, name: 'gitlab', state: 'pending', last_success_at: undefined }
+  const codeberg: Target = { ...github, id: 4, name: 'codeberg', enabled: false }
+  routes({}, [], [github, gitlab, bitbucket, codeberg])
+  render(<ProjectPage name="demo" />)
+
+  await screen.findByText('codeberg')
+  const targets = screen.getByRole('heading', { name: "Target'ы" }).closest('section')!
+  const rows = within(targets).getAllByRole('row').slice(1)
+  const tracks = rows.map((r) => (r as HTMLTableRowElement).cells[0])
+  expect(tracks.map((c) => c.className)).toEqual([
+    'track track-synced',
+    'track track-pending',
+    'track track-error',
+    'track track-off',
+  ])
+  for (const cell of tracks) {
+    expect(cell).toHaveAttribute('aria-hidden', 'true')
+    expect(cell).toHaveTextContent('')
+  }
+  expect(within(rows[3]).getByText('синхронизирован')).toBeInTheDocument()
+  expect(within(rows[3]).getByText('нет')).toBeInTheDocument()
+})
+
+test('without targets the delivery line ends under the clone addresses', async () => {
+  routes({}, [], [])
+  render(<ProjectPage name="demo" />)
+
+  expect(await screen.findByText("Target'ов пока нет.")).toBeInTheDocument()
+  const targets = screen.getByRole('heading', { name: "Target'ы" }).closest('section')!
+  expect(within(targets).queryByRole('table')).not.toBeInTheDocument()
+  expect(targets.querySelector('.track-head')).toHaveClass('dead-end')
 })
 
 test('"Доставить сейчас" starts a delivery', async () => {

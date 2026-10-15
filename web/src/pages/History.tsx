@@ -1,10 +1,16 @@
 import type { ArchiveEntry, EventKind, ProjectEvent } from '../api'
-import { formatTime } from '../ui'
+import { formatTime, Lamp, type LampTone } from '../ui'
 
 const eventLabels: Record<EventKind, string> = {
   delivery_error: 'ошибка доставки',
   diverged: 'расхождение',
   archive_push: 'архив при push',
+}
+
+const eventTones: Record<EventKind, LampTone> = {
+  delivery_error: 'err',
+  diverged: 'wait',
+  archive_push: 'neutral',
 }
 
 export function EventLog({ events }: { events: ProjectEvent[] }) {
@@ -29,13 +35,16 @@ export function EventLog({ events }: { events: ProjectEvent[] }) {
             <tbody>
               {events.map((e) => (
                 <tr key={e.id}>
-                  <td className="nowrap">{formatTime(e.created_at)}</td>
+                  <td className="nowrap mono">{formatTime(e.created_at)}</td>
                   <td>
-                    <span className={`badge badge-event-${e.kind}`}>{eventLabels[e.kind] ?? e.kind}</span>
+                    <span className={`state event-${e.kind}`}>
+                      <Lamp tone={eventTones[e.kind] ?? 'neutral'} />
+                      {eventLabels[e.kind] ?? e.kind}
+                    </span>
                   </td>
                   <td>{e.target_name}</td>
-                  <td>{e.ref && <code>{e.ref}</code>}</td>
-                  <td>{e.archive_ref && <code>{e.archive_ref}</code>}</td>
+                  <td className="ref">{e.ref && <code>{e.ref}</code>}</td>
+                  <td className="ref">{e.archive_ref && <code>{e.archive_ref}</code>}</td>
                   <td className="message-cell">{e.message}</td>
                 </tr>
               ))}
@@ -68,12 +77,12 @@ export function ArchiveList({ entries }: { entries: ArchiveEntry[] }) {
             <tbody>
               {entries.map((a) => (
                 <tr key={a.id}>
-                  <td className="nowrap">{formatTime(a.created_at)}</td>
+                  <td className="nowrap mono">{formatTime(a.created_at)}</td>
                   <td>{a.source === 'push' ? 'push' : a.target_name}</td>
-                  <td>
+                  <td className="ref">
                     <code>{a.orig_ref}</code>
                   </td>
-                  <td>
+                  <td className="nowrap">
                     <code title={a.object}>{a.object.slice(0, 12)}</code>
                   </td>
                   <td>

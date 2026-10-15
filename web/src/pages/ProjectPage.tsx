@@ -10,7 +10,7 @@ import {
   type TargetInput,
 } from '../api'
 import { Link } from '../router'
-import { authKindLabel, ErrorMessage, formatTime, Notice, StateBadge } from '../ui'
+import { authKindLabel, ErrorMessage, formatTime, Lamp, Notice, StateBadge, stateTone } from '../ui'
 import { ArchiveList, EventLog } from './History'
 import { ProtectedRefs } from './ProtectedRefs'
 import { TargetForm } from './TargetForm'
@@ -70,13 +70,14 @@ export function ProjectPage({ name, refreshMs = 5000 }: Props) {
       <p className="breadcrumbs">
         <Link to="/">Проекты</Link> / {name}
       </p>
-      <h1>{name}</h1>
+      <h1 className="project-name">{name}</h1>
       <ErrorMessage text={error} />
       {details === null ? (
         !error && <p className="muted">Загрузка...</p>
       ) : (
         <>
-          <section className="card">
+          {/* The clone addresses are the source of the delivery lines drawn below. */}
+          <section className="card source">
             <h2>Адреса для клонирования</h2>
             <dl className="clone">
               <dt>HTTP(S)</dt>
@@ -151,41 +152,62 @@ function Targets({ project, targets, reload }: TargetsProps) {
   }
 
   return (
-    <section className="card">
-      <div className="section-head">
-        <h2>Target'ы</h2>
-        {form?.mode !== 'add' && (
-          <button type="button" className="small" onClick={() => setForm({ mode: 'add' })}>
-            Добавить target
-          </button>
-        )}
+    <section className="targets">
+      {/* The trunk runs down the left gutter and branches into every row; without targets it ends in a buffer stop. */}
+      <div className={targets.length === 0 ? 'track-head dead-end' : 'track-head'}>
+        <div className="section-head">
+          <h2>Target'ы</h2>
+          {form?.mode !== 'add' && (
+            <button type="button" className="small" onClick={() => setForm({ mode: 'add' })}>
+              Добавить target
+            </button>
+          )}
+        </div>
+        <p className="muted">
+          Хостинги, на которые metagit доставляет ветки и теги проекта. Удаление target'а не трогает репозиторий на
+          хостинге.
+        </p>
+        <ErrorMessage text={error} />
+        <Notice text={notice} />
+        {targets.length === 0 && <p className="muted">Target'ов пока нет.</p>}
       </div>
-      <p className="muted">
-        Хостинги, на которые metagit доставляет ветки и теги проекта. Удаление target'а не трогает репозиторий на
-        хостинге.
-      </p>
-      <ErrorMessage text={error} />
-      <Notice text={notice} />
-      {targets.length === 0 ? (
-        <p className="muted">Target'ов пока нет.</p>
-      ) : (
+      {targets.length > 0 && (
         <div className="table-wrap">
-          <table>
+          <table className="targets-table">
             <thead>
               <tr>
+                <th className="track" aria-hidden="true" />
                 <th>Имя</th>
+                <th>Состояние</th>
+                <th>Последняя успешная доставка</th>
                 <th>URL</th>
                 <th>Учетные данные</th>
                 <th>Включен</th>
-                <th>Состояние</th>
-                <th>Последняя успешная доставка</th>
                 <th aria-label="Действия" />
               </tr>
             </thead>
             <tbody>
               {targets.map((t) => (
                 <tr key={t.id} className={t.enabled ? undefined : 'disabled-row'}>
+                  <td className={`track track-${t.enabled ? t.state : 'off'}`} aria-hidden="true">
+                    {t.enabled && t.state === 'error' && <span className="track-break" />}
+                    <Lamp tone={t.enabled ? stateTone(t.state) : 'off'} />
+                  </td>
                   <td className="strong">{t.name}</td>
+                  <td>
+                    <StateBadge state={t.state} />
+                    {t.last_error && <div className="target-error">{t.last_error}</div>}
+                    {t.state === 'error' && t.next_attempt_at && (
+                      <div className="muted small">следующая попытка: {formatTime(t.next_attempt_at)}</div>
+                    )}
+                  </td>
+                  <td className="nowrap">
+                    {t.last_success_at ? (
+                      <span className="mono">{formatTime(t.last_success_at)}</span>
+                    ) : (
+                      <span className="muted">не было</span>
+                    )}
+                  </td>
                   <td>
                     <code className="target-url">{t.url}</code>
                   </td>
@@ -194,14 +216,6 @@ function Targets({ project, targets, reload }: TargetsProps) {
                     {t.auth_kind === 'https' && t.username && <div className="muted small">логин {t.username}</div>}
                   </td>
                   <td>{t.enabled ? 'да' : 'нет'}</td>
-                  <td>
-                    <StateBadge state={t.state} />
-                    {t.last_error && <div className="target-error">{t.last_error}</div>}
-                    {t.state === 'error' && t.next_attempt_at && (
-                      <div className="muted small">следующая попытка: {formatTime(t.next_attempt_at)}</div>
-                    )}
-                  </td>
-                  <td>{t.last_success_at ? formatTime(t.last_success_at) : <span className="muted">не было</span>}</td>
                   <td className="actions">
                     <button
                       type="button"

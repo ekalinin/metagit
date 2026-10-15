@@ -37,6 +37,23 @@ test('lists projects with clone URLs and a summary of target states', async () =
   expect(screen.getByText('ошибка: 1')).toBeInTheDocument()
 })
 
+test('every target has a lamp named after it, a disabled one is out', async () => {
+  const off = { ...target(2, 'synced'), enabled: false }
+  mockFetch({ 'GET /api/projects': ok([{ ...demo, targets: [target(1, 'synced'), off, target(3, 'error')] }]) })
+  const { container } = render(<ProjectsPage />)
+
+  await screen.findByRole('link', { name: 'demo' })
+  const lamps = [...container.querySelectorAll('.lamp-strip .lamp')]
+  expect(lamps.map((l) => l.getAttribute('title'))).toEqual([
+    't1: синхронизирован',
+    't2: синхронизирован, выключен',
+    't3: ошибка',
+  ])
+  expect(lamps.map((l) => l.className)).toEqual(['lamp lamp-ok', 'lamp lamp-off', 'lamp lamp-err'])
+  expect(container.querySelector('.lamp-strip')).toHaveAttribute('aria-hidden', 'true')
+  expect(screen.getByText('выключено: 1')).toBeInTheDocument()
+})
+
 test('deletion is enabled only after the exact project name is typed', async () => {
   let projects = [demo]
   const fetch = mockFetch({

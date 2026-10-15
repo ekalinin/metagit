@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { api, errorText, type ProjectSummary, type Target, type TargetState } from '../api'
 import { Link, projectPath } from '../router'
-import { ErrorMessage, Field, formatTime, stateLabel } from '../ui'
+import { ErrorMessage, Field, formatTime, Lamp, stateLabel, stateTone } from '../ui'
 
 export function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null)
@@ -104,16 +104,25 @@ function TargetsSummary({ targets }: { targets: Target[] }) {
   const disabled = targets.filter((t) => !t.enabled).length
   return (
     <div className="summary">
+      <span className="lamp-strip" aria-hidden="true">
+        {targets.map((t) => (
+          <Lamp
+            key={t.id}
+            tone={t.enabled ? stateTone(t.state) : 'off'}
+            title={`${t.name}: ${stateLabel(t.state)}${t.enabled ? '' : ', выключен'}`}
+          />
+        ))}
+      </span>
       {summaryOrder.map((state) => {
         const count = targets.filter((t) => t.state === state).length
         if (count === 0) return null
         return (
-          <span key={state} className={`badge badge-${state}`}>
+          <span key={state} className={`count count-${state}`}>
             {stateLabel(state)}: {count}
           </span>
         )
       })}
-      {disabled > 0 && <span className="muted small">выключено: {disabled}</span>}
+      {disabled > 0 && <span className="count">выключено: {disabled}</span>}
     </div>
   )
 }

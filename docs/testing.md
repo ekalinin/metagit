@@ -123,6 +123,12 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
 | Расхождение в журнале | `api`: `TestStatusEventsAndArchiveAPI`; `pages/ProjectPage.test.tsx`: "event log and archive show readable labels and the git fetch command" |
 | Ошибка доставки в статусе | `api`: `TestStatusEventsAndArchiveAPI`; `pages/ProjectPage.test.tsx`: "shows clone addresses and targets with state, last error and times" |
 | Архив после force-push | `api`: `TestStatusEventsAndArchiveAPI`; `pages/ProjectPage.test.tsx`: "event log and archive show readable labels and the git fetch command" |
+| Первое открытие | `App.test.tsx`: "a chosen mode is applied and saved, system removes it"; `theme.test.ts`: "a saved dark mode is read back, anything else means system"; цвет темы - проверка в браузере (см. ниже) |
+| Ручной выбор сохраняется | `theme.test.ts`: "a chosen mode is saved and applied, system removes both"; `App.test.tsx`: "the saved mode is checked" |
+| Системный режим следует за ОС | проверка в браузере (см. ниже) |
+| Тема на странице входа | `App.test.tsx`: "the login page keeps the chosen mode after logout" |
+| Сеть без доступа в интернет | проверка в браузере (см. ниже) |
+| Состояние без цвета | `ui.test.tsx`: "a state is written as the only text of its badge", "a lamp is hidden from assistive technologies"; `pages/ProjectPage.test.tsx`: "every target row starts with a delivery line drawn for its state" |
 
 ## Разовые проверки вне `make test`
 
@@ -137,4 +143,11 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
   - токен показывается один раз;
   - экспорт на одном экземпляре и импорт на другом (в том числе с неверным паролем);
   - удаление проекта после ввода его имени.
+- **Проверка оформления в браузере.** Google Chrome через `playwright-core` на трех экземплярах `metagit serve`: на первом проект с target'ами во всех состояниях (второй экземпляр по SSH - "синхронизирован", закрытый порт - "ошибка", адрес без ответа - "ожидает", выключенный target), второй экземпляр - target первого, третий - без владельца. Проверялось:
+  - скриншоты всех страниц в светлой и темной теме на ширине 1280 и 375 px;
+  - видимый фокус при обходе с клавиатуры;
+  - выбранная тема сохраняется после перезагрузки и на странице входа после выхода;
+  - в режиме "Системная" тема меняется вслед за ОС без перезагрузки;
+  - бегущий пунктир у target'а в состоянии "ожидает" останавливается при `prefers-reduced-motion: reduce`;
+  - все запросы страниц идут к адресу metagit, шрифты Golos Text и Martian Mono загружены для латиницы и кириллицы.
 - **Шаги установки из `INSTALL.md` в чистом контейнере Debian** (git 2.47): установка, создание владельца, запуск, токен, push по HTTP, clone по SSH, экспорт. Systemd, reverse proxy с TLS и доставка на настоящие хостинги не проверялись.

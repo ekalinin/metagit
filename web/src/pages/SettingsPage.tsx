@@ -96,8 +96,14 @@ function TokensSection() {
                 {tokens.map((t) => (
                   <tr key={t.id}>
                     <td className="strong">{t.name}</td>
-                    <td>{formatTime(t.created_at)}</td>
-                    <td>{t.last_used_at ? formatTime(t.last_used_at) : <span className="muted">не использовался</span>}</td>
+                    <td className="nowrap mono">{formatTime(t.created_at)}</td>
+                    <td className="nowrap">
+                      {t.last_used_at ? (
+                        <span className="mono">{formatTime(t.last_used_at)}</span>
+                      ) : (
+                        <span className="muted">не использовался</span>
+                      )}
+                    </td>
                     <td className="actions">
                       <button
                         type="button"
@@ -203,7 +209,7 @@ function SSHKeysSection() {
                     <td>
                       <code>{k.fingerprint}</code>
                     </td>
-                    <td>{formatTime(k.created_at)}</td>
+                    <td className="nowrap mono">{formatTime(k.created_at)}</td>
                     <td className="actions">
                       <button
                         type="button"
@@ -231,6 +237,7 @@ function SSHKeysSection() {
         </Field>
         <Field label="Публичный ключ">
           <textarea
+            className="mono"
             value={publicKey}
             rows={3}
             required
