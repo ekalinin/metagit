@@ -1,53 +1,57 @@
 # metagit
 
-Self-hosted сервис, который для разработчика выглядит как обычный git remote, а сам хранит полную копию репозитория и рассылает ветки и теги на несколько git-хостингов (GitHub, Bitbucket, Codeberg и любые другие с доступом по git).
+English | [Русский](README.ru.md)
 
-Зачем: если проект живет на одном хостинге, его можно потерять (заблокировали аккаунт, хостинг закрылся, ошибочный force-push затер историю). metagit держит копии в нескольких местах и не теряет прежние состояния веток.
+A self-hosted service that looks like an ordinary git remote to a developer, while it keeps a full copy of the repository and sends branches and tags to several git hostings (GitHub, Bitbucket, Codeberg and any other with git access).
+
+Why: a project that lives on one hosting can be lost (the account gets blocked, the hosting shuts down, a mistaken force-push wipes out the history). metagit keeps copies in several places and does not lose previous states of branches.
 
 ```
  git push / clone
         |
         v
  +---------------- metagit ----------------+
- |  git по HTTP(S) и SSH                   |
- |  защищенные ветки и теги                |
- |  архив прежних состояний refs           |
- |  асинхронная доставка на хостинги       |
+ |  git over HTTP(S) and SSH               |
+ |  protected branches and tags            |
+ |  archive of previous ref states         |
+ |  asynchronous delivery to hostings      |
  +-----------------------------------------+
         |               |               |
         v               v               v
-     GitHub         Bitbucket     любой git-хостинг
+     GitHub         Bitbucket     any git hosting
 ```
 
-## Как это работает
+## How it works
 
-- **Источник истины - metagit.** Синхронизация односторонняя: изменения приходят только через push в metagit, хостинги получают копию.
-- **Доставка асинхронная.** Push успешен, как только metagit сохранил изменения у себя. Затем metagit несколько секунд ждет результатов доставки и печатает их в выводе push:
+- **metagit is the source of truth.** Sync is one-way: changes arrive only through a push to metagit, the hostings get a copy.
+- **Delivery is asynchronous.** A push succeeds as soon as metagit has saved the changes. Then metagit waits a few seconds for the delivery results and prints them in the push output:
 
   ```
-  remote: metagit: github: доставлено
-  remote: metagit: codeberg: в очереди
-  remote: metagit: bitbucket: ошибка: fatal: Authentication failed ... (повтор позже)
+  remote: metagit: github: delivered
+  remote: metagit: codeberg: queued
+  remote: metagit: bitbucket: error: fatal: Authentication failed ... (retry later)
   ```
 
-  Неудачная доставка повторяется автоматически с растущим интервалом (от 15 секунд до 30 минут).
-- **Переносятся только ветки и теги.** Ветки и теги на хостинге, которые metagit туда не отправлял (например, ветки под pull request), он не трогает.
-- **Ничего не теряется.** Перед force-push, удалением ветки или перемещением тега прежнее значение сохраняется в `refs/metagit/archive/push/...`. Для защищенных веток и тегов такие push запрещены.
-- **Расхождения на хостинге.** Если ветку на хостинге изменили в обход metagit (например, merge в веб-интерфейсе), metagit сохраняет состояние хостинга в `refs/metagit/archive/targets/<id>/...`, перезаписывает ветку своим значением через `--force-with-lease` и пишет событие в журнал проекта.
-- **Уведомления** - статус target'ов и журнал событий в веб-интерфейсе.
+  A failed delivery is retried automatically with a growing interval (from 15 seconds to 30 minutes).
+- **Only branches and tags are sent.** Branches and tags on a hosting that metagit did not send there (for example, branches for pull requests) are left alone.
+- **Nothing is lost.** Before a force-push, a branch deletion or a tag move, the previous value is saved in `refs/metagit/archive/push/...`. For protected branches and tags such pushes are rejected.
+- **Divergence on a hosting.** If a branch on a hosting was changed bypassing metagit (for example, a merge in the hosting's web interface), metagit saves the hosting's state in `refs/metagit/archive/targets/<id>/...`, overwrites the branch with its own value using `--force-with-lease` and records an event in the project log.
+- **Notifications** - target status and the event log in the web console.
 
-## Установка
+## Installation
 
-Требования, сборка, установка на сервер и настройки `metagit serve` описаны в [INSTALL.md](INSTALL.md).
+Requirements, building, installing on a server and `metagit serve` settings are described in [INSTALL.md](INSTALL.md) (in Russian).
 
-## Использование
+## Usage
 
-1. Откройте веб-интерфейс и войдите.
-2. В разделе "Настройки" создайте токен доступа для git (он показывается один раз) и, если нужен SSH, добавьте свой публичный ключ.
-3. Создайте проект. На его странице видны адреса для клонирования:
+The web console is in Russian for now, its labels are given in quotes.
+
+1. Open the web console and sign in.
+2. In Settings ("Настройки"), create a git access token (it is shown once) and, if you need SSH, add your public key.
+3. Create a project. Its page shows the clone addresses:
 
    ```sh
-   # HTTP(S): логин любой, пароль - токен metagit
+   # HTTP(S): any login, the password is a metagit token
    git remote add metagit https://git.example.com/foo.git
    # SSH
    git remote add metagit ssh://git@git.example.com:2222/foo.git
@@ -55,94 +59,94 @@ Self-hosted сервис, который для разработчика выг�
    git push metagit main
    ```
 
-4. Добавьте target'ы - репозитории на хостингах. Репозиторий на хостинге нужно создать заранее. Target - это URL и учетные данные:
-   - `https://...` с логином и токеном (например, fine-grained personal access token GitHub с правом записи в содержимое);
-   - `ssh://...` или `git@host:path` с приватным SSH-ключом без пароля (например, deploy key с правом записи).
+4. Add targets - repositories on hostings. Create the repository on the hosting beforehand. A target is a URL and credentials:
+   - `https://...` with a login and a token (for example, a GitHub fine-grained personal access token with write access to contents);
+   - `ssh://...` or `git@host:path` with a private SSH key without a passphrase (for example, a deploy key with write access).
 
-   Учетные данные в самом URL запрещены. Ключ хоста SSH запоминается при первом подключении (`known_hosts` в каталоге данных).
-5. При необходимости защитите ветки и теги шаблонами, например `refs/heads/main` или `refs/tags/*` (`*` совпадает с любой последовательностью символов, включая `/`).
+   Credentials in the URL itself are not allowed. The SSH host key is remembered on the first connection (`known_hosts` in the data directory).
+5. If needed, protect branches and tags with patterns, for example `refs/heads/main` or `refs/tags/*` (`*` matches any sequence of characters, including `/`).
 
-Как выглядят страницы веб-интерфейса в светлой и темной теме, показано в [docs/web-interface.md](docs/web-interface.md).
+How the web console pages look in the light and dark themes is shown in [docs/web-interface.md](docs/web-interface.md).
 
-### Получение кода из архива
+### Getting code from the archive
 
-Список архивных refs есть на странице проекта вместе с командой для получения:
+The list of archived refs is on the project page, together with the command to fetch each of them:
 
 ```sh
 git fetch https://git.example.com/foo.git refs/metagit/archive/push/heads/feature/20261014T120000Z
 git branch feature-restored FETCH_HEAD
 ```
 
-### Восстановление после потери сервера
+### Recovering after losing the server
 
-1. Заранее сделайте экспорт настроек ("Настройки" → "Экспорт"). Файл зашифрован паролем, который вы вводите при экспорте (формат [age](https://age-encryption.org), его можно открыть и командой `age -d`). В нем есть учетные данные хостингов, храните его соответственно.
-2. На новом сервере установите metagit и создайте владельца.
-3. Импортируйте файл ("Настройки" → "Импорт"). Появятся проекты с пустыми репозиториями, их защищенные refs и target'ы. До первого push metagit ничего не меняет на хостингах.
-4. Заполните проекты из локальной копии или из любого живого зеркала:
+1. Export the settings in advance (Settings → Export, "Настройки" → "Экспорт"). The file is encrypted with the password you enter on export (the [age](https://age-encryption.org) format, it can also be opened with `age -d`). It contains the hosting credentials, keep it accordingly.
+2. On the new server, install metagit and create the owner.
+3. Import the file (Settings → Import, "Настройки" → "Импорт"). Projects appear with empty repositories, their protected refs and targets. Until the first push, metagit changes nothing on the hostings.
+4. Fill the projects from a local copy or from any live mirror:
 
    ```sh
    git clone --mirror git@github.com:me/foo.git && cd foo.git
    git push https://git.example.com/foo.git 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
    ```
 
-   Ветки, которые на хостинге уже совпадают, считаются доставленными без архива и без событий расхождения.
+   Branches that already match on a hosting are counted as delivered, without archives and without divergence events.
 
-Архивные refs хранятся только в metagit и при потере сервера теряются вместе с ним.
+Archived refs are stored only in metagit and are lost together with the server.
 
-## Каталог данных
+## Data directory
 
 ```
 data/
-  metagit.db              настройки и состояние (SQLite)
-  secret.key              мастер-ключ, если не задан METAGIT_SECRET_KEY
-  ssh_host_ed25519_key    ключ SSH-сервера
-  known_hosts             ключи хостингов для доставки по SSH
-  hooks/                  git-хуки, перезаписываются при каждом старте
-  bin/askpass             выдает git учетные данные HTTPS-target'ов
-  repos/<project>.git     bare-репозитории
-  tmp/                    временные файлы
+  metagit.db              settings and state (SQLite)
+  secret.key              master key, if METAGIT_SECRET_KEY is not set
+  ssh_host_ed25519_key    SSH server key
+  known_hosts             hosting keys for delivery over SSH
+  hooks/                  git hooks, rewritten on every start
+  bin/askpass             gives git the credentials of HTTPS targets
+  repos/<project>.git     bare repositories
+  tmp/                    temporary files
 ```
 
-Для резервной копии достаточно остановить сервис и скопировать каталог данных (и мастер-ключ, если он хранится отдельно).
+For a backup, it is enough to stop the service and copy the data directory (and the master key, if it is stored separately).
 
-## Безопасность
+## Security
 
-- Запускайте metagit под отдельным системным пользователем: учетные данные хостингов передаются дочерним процессам git через окружение.
-- Учетные данные target'ов хранятся зашифрованными (AES-256-GCM) и не показываются в веб-интерфейсе, журналах и выводе push.
-- Пароль владельца хранится как argon2id-хеш, попытки входа ограничены по частоте.
-- SSH-сервер принимает только ключи владельца и выполняет только `git-upload-pack` и `git-receive-pack`.
+- Run metagit as a separate system user: hosting credentials are passed to child git processes through the environment.
+- Target credentials are stored encrypted (AES-256-GCM) and are not shown in the web console, logs or push output.
+- The owner password is stored as an argon2id hash, sign-in attempts are rate limited.
+- The SSH server accepts only the owner's keys and runs only `git-upload-pack` and `git-receive-pack`.
 
-## Что не входит в эту версию
+## Not in this version
 
-Git LFS, wiki, релизы, issues и pull request; несколько пользователей; двусторонняя синхронизация; создание репозиториев на хостингах через их API; отправка архивных refs на хостинги; уведомления вне веб-интерфейса.
+Git LFS, wiki, releases, issues and pull requests; multiple users; two-way sync; creating repositories on hostings through their API; sending archived refs to hostings; notifications outside the web console.
 
-## Разработка
+## Development
 
 ```sh
-make test         # Go и веб-тесты
-make lint         # gofmt, go vet, проверка типов TypeScript
+make test         # Go and web tests
+make lint         # gofmt, go vet, TypeScript type check
 ```
 
-### Веб-интерфейс в режиме разработки
+### Web console in development mode
 
-`npm run dev` запускает только интерфейс (Vite, по умолчанию http://localhost:5173), а запросы к `/api` передает запущенному `metagit serve`. Поэтому сначала нужен сам сервис:
+`npm run dev` starts only the interface (Vite, http://localhost:5173 by default) and passes `/api` requests to a running `metagit serve`. So the service itself is needed first:
 
 ```sh
 make go
 ./bin/metagit owner create --name dev --data-dir ./data
-./bin/metagit serve --data-dir ./data          # API на http://localhost:8080
+./bin/metagit serve --data-dir ./data          # API on http://localhost:8080
 
-# в другом терминале
+# in another terminal
 cd web && npm run dev
 ```
 
-Если `metagit serve` слушает другой адрес, передайте его через `METAGIT_API_URL`:
+If `metagit serve` listens on another address, pass it in `METAGIT_API_URL`:
 
 ```sh
 ./bin/metagit serve --data-dir ./data --http-addr :9000
 cd web && METAGIT_API_URL=http://localhost:9000 npm run dev
 ```
 
-Интеграционные тесты запускают настоящий git и собирают бинарник metagit. `METAGIT_TEST_LOG=1` выводит журнал сервиса в тестах.
+Integration tests run real git and build the metagit binary. `METAGIT_TEST_LOG=1` prints the service log in tests.
 
-Уровни тестов, шаги сквозного теста и то, какие тесты проверяют каждый сценарий спецификаций, описаны в [docs/testing.md](docs/testing.md).
+Test levels, the steps of the end-to-end test and which tests check each spec scenario are described in [docs/testing.md](docs/testing.md) (in Russian).
