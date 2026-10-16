@@ -75,7 +75,7 @@ func (a *API) Handler() http.Handler {
 	private("POST /api/export", a.export)
 	private("POST /api/import", a.importSettings)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
-		writeError(w, http.StatusNotFound, "неизвестный адрес API")
+		writeError(w, http.StatusNotFound, "unknown API endpoint")
 	})
 	return mux
 }
@@ -99,12 +99,12 @@ func (a *API) wrap(h func(http.ResponseWriter, *http.Request) error, needSession
 			// form posts: browsers cannot send JSON across sites without CORS.
 			mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 			if mt != "application/json" {
-				writeError(w, http.StatusUnsupportedMediaType, "API принимает изменения только с Content-Type: application/json")
+				writeError(w, http.StatusUnsupportedMediaType, "the API accepts changes only with Content-Type: application/json")
 				return
 			}
 		}
 		if needSession && !a.Auth.ValidSession(r.Context(), auth.SessionFromRequest(r)) {
-			writeError(w, http.StatusUnauthorized, "нужно войти")
+			writeError(w, http.StatusUnauthorized, "login required")
 			return
 		}
 		if err := h(w, r); err != nil {
@@ -126,12 +126,12 @@ func (a *API) handleError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, auth.ErrInvalidInput):
 		writeError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, store.ErrNotFound):
-		writeError(w, http.StatusNotFound, "не найдено")
+		writeError(w, http.StatusNotFound, "not found")
 	case errors.Is(err, store.ErrConflict):
-		writeError(w, http.StatusConflict, "уже существует")
+		writeError(w, http.StatusConflict, "already exists")
 	default:
 		a.Log.Error("API request failed", "method", r.Method, "path", r.URL.Path, "err", err)
-		writeError(w, http.StatusInternalServerError, "внутренняя ошибка, подробности в журнале сервера")
+		writeError(w, http.StatusInternalServerError, "internal error, see the server log for details")
 	}
 }
 
@@ -149,7 +149,7 @@ func decode(r *http.Request, v any) error {
 	dec := json.NewDecoder(io.LimitReader(r.Body, 16<<20))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
-		return errorf(http.StatusBadRequest, "некорректный JSON: %v", err)
+		return errorf(http.StatusBadRequest, "invalid JSON: %v", err)
 	}
 	return nil
 }
@@ -157,7 +157,7 @@ func decode(r *http.Request, v any) error {
 func pathID(r *http.Request) (int64, error) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		return 0, errorf(http.StatusNotFound, "не найдено")
+		return 0, errorf(http.StatusNotFound, "not found")
 	}
 	return id, nil
 }
@@ -189,14 +189,14 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) error {
 	if _, exists, err := a.Auth.Owner(r.Context()); err != nil {
 		return err
 	} else if !exists {
-		return errorf(http.StatusConflict, "владелец не создан: выполните на сервере metagit owner create")
+		return errorf(http.StatusConflict, "owner is not created: run metagit owner create on the server")
 	}
 	id, err := a.Auth.Login(r.Context(), in.Name, in.Password, r.RemoteAddr)
 	switch {
 	case errors.Is(err, auth.ErrTooManyAttempts):
-		return errorf(http.StatusTooManyRequests, "слишком много неудачных попыток входа, попробуйте позже")
+		return errorf(http.StatusTooManyRequests, "too many failed login attempts, try again later")
 	case errors.Is(err, auth.ErrInvalidCredentials):
-		return errorf(http.StatusUnauthorized, "неверное имя или пароль")
+		return errorf(http.StatusUnauthorized, "invalid name or password")
 	case err != nil:
 		return err
 	}
@@ -263,7 +263,7 @@ func (a *API) createProject(w http.ResponseWriter, r *http.Request) error {
 	}
 	p, err := a.Core.CreateProject(r.Context(), strings.TrimSpace(in.Name))
 	if errors.Is(err, store.ErrConflict) {
-		return errorf(http.StatusConflict, "проект %q уже существует", in.Name)
+		return errorf(http.StatusConflict, "project %q already exists", in.Name)
 	}
 	if err != nil {
 		return err
@@ -373,7 +373,7 @@ func (a *API) createTarget(w http.ResponseWriter, r *http.Request) error {
 	}
 	t, err := a.Core.AddTarget(r.Context(), r.PathValue("name"), in.core())
 	if errors.Is(err, store.ErrConflict) {
-		return errorf(http.StatusConflict, "target %q уже есть в проекте", in.Name)
+		return errorf(http.StatusConflict, "target %q already exists in the project", in.Name)
 	}
 	if err != nil {
 		return err
@@ -393,7 +393,7 @@ func (a *API) updateTarget(w http.ResponseWriter, r *http.Request) error {
 	}
 	t, err := a.Core.UpdateTarget(r.Context(), r.PathValue("name"), id, in.core())
 	if errors.Is(err, store.ErrConflict) {
-		return errorf(http.StatusConflict, "target %q уже есть в проекте", in.Name)
+		return errorf(http.StatusConflict, "target %q already exists in the project", in.Name)
 	}
 	if err != nil {
 		return err
@@ -459,7 +459,7 @@ func (a *API) addProtected(w http.ResponseWriter, r *http.Request) error {
 	}
 	p, err := a.Core.AddProtected(r.Context(), r.PathValue("name"), in.Pattern)
 	if errors.Is(err, store.ErrConflict) {
-		return errorf(http.StatusConflict, "шаблон %q уже есть", in.Pattern)
+		return errorf(http.StatusConflict, "pattern %q already exists", in.Pattern)
 	}
 	if err != nil {
 		return err
@@ -497,7 +497,7 @@ func (a *API) listEvents(w http.ResponseWriter, r *http.Request) error {
 	if v := r.URL.Query().Get("limit"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 || n > 1000 {
-			return errorf(http.StatusBadRequest, "limit должен быть от 1 до 1000")
+			return errorf(http.StatusBadRequest, "limit must be between 1 and 1000")
 		}
 		limit = n
 	}
@@ -627,7 +627,7 @@ func (a *API) addSSHKey(w http.ResponseWriter, r *http.Request) error {
 	}
 	k, err := a.Auth.AddSSHKey(r.Context(), in.Name, in.PublicKey)
 	if errors.Is(err, store.ErrConflict) {
-		return errorf(http.StatusConflict, "этот ключ уже добавлен")
+		return errorf(http.StatusConflict, "this key is already added")
 	}
 	if err != nil {
 		return err
@@ -680,7 +680,7 @@ func (a *API) importSettings(w http.ResponseWriter, r *http.Request) error {
 	}
 	data, err := base64.StdEncoding.DecodeString(in.Data)
 	if err != nil {
-		return errorf(http.StatusBadRequest, "файл должен быть передан в base64")
+		return errorf(http.StatusBadRequest, "the file must be sent in base64")
 	}
 	created, err := a.Transfer.Import(r.Context(), data, in.Passphrase)
 	if err != nil {

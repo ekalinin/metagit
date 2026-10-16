@@ -27,9 +27,9 @@ Self-hosted сервис, который для разработчика выг�
 - **Доставка асинхронная.** Push успешен, как только metagit сохранил изменения у себя. Затем metagit несколько секунд ждет результатов доставки и печатает их в выводе push:
 
   ```
-  remote: metagit: github: доставлено
-  remote: metagit: codeberg: в очереди
-  remote: metagit: bitbucket: ошибка: fatal: Authentication failed ... (повтор позже)
+  remote: metagit: github: delivered
+  remote: metagit: codeberg: queued
+  remote: metagit: bitbucket: error: fatal: Authentication failed ... (retry later)
   ```
 
   Неудачная доставка повторяется автоматически с растущим интервалом (от 15 секунд до 30 минут).

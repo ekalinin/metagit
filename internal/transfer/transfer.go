@@ -70,7 +70,7 @@ func invalid(format string, args ...any) error {
 // Export returns the settings encrypted with the passphrase (age, armored).
 func (s *Service) Export(ctx context.Context, passphrase string) ([]byte, error) {
 	if utf8.RuneCountInString(passphrase) < MinPassphraseLength {
-		return nil, invalid("пароль файла экспорта должен быть не короче %d символов", MinPassphraseLength)
+		return nil, invalid("export file password must be at least %d characters", MinPassphraseLength)
 	}
 	settings := Settings{Version: Version, ExportedAt: time.Now().UTC(), Projects: []Project{}}
 	projects, err := s.Store.ListProjects(ctx)
@@ -134,7 +134,7 @@ func (s *Service) Export(ctx context.Context, passphrase string) ([]byte, error)
 func Decrypt(data []byte, passphrase string) (*Settings, error) {
 	identity, err := age.NewScryptIdentity(passphrase)
 	if err != nil {
-		return nil, invalid("неверный пароль")
+		return nil, invalid("invalid password")
 	}
 	var src io.Reader = bytes.NewReader(data)
 	if bytes.HasPrefix(bytes.TrimSpace(data), []byte(armor.Header)) {
@@ -142,20 +142,20 @@ func Decrypt(data []byte, passphrase string) (*Settings, error) {
 	}
 	r, err := age.Decrypt(src, identity)
 	if err != nil {
-		return nil, invalid("не удалось расшифровать файл: неверный пароль или файл поврежден")
+		return nil, invalid("cannot decrypt the file: invalid password or corrupted file")
 	}
 	plain, err := io.ReadAll(io.LimitReader(r, 64<<20))
 	if err != nil {
-		return nil, invalid("не удалось расшифровать файл: файл поврежден")
+		return nil, invalid("cannot decrypt the file: corrupted file")
 	}
 	var settings Settings
 	dec := json.NewDecoder(bytes.NewReader(plain))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&settings); err != nil {
-		return nil, invalid("файл экспорта поврежден: %v", err)
+		return nil, invalid("export file is corrupted: %v", err)
 	}
 	if settings.Version != Version {
-		return nil, invalid("неподдерживаемая версия файла экспорта: %d", settings.Version)
+		return nil, invalid("unsupported export file version: %d", settings.Version)
 	}
 	return &settings, nil
 }
@@ -219,10 +219,10 @@ func (s *Service) validate(ctx context.Context, settings *Settings) error {
 	for i := range settings.Projects {
 		ep := &settings.Projects[i]
 		if err := repo.ValidateName(ep.Name); err != nil {
-			return invalid("проект %q: %v", ep.Name, err)
+			return invalid("project %q: %v", ep.Name, err)
 		}
 		if seen[ep.Name] {
-			return invalid("проект %q встречается в файле дважды", ep.Name)
+			return invalid("project %q appears in the file twice", ep.Name)
 		}
 		seen[ep.Name] = true
 		if _, err := s.Store.ProjectByName(ctx, ep.Name); err == nil || s.Repos.Exists(ep.Name) {
@@ -232,7 +232,7 @@ func (s *Service) validate(ctx context.Context, settings *Settings) error {
 		}
 		for _, pattern := range ep.ProtectedRefs {
 			if err := archive.ValidatePattern(pattern); err != nil {
-				return invalid("проект %q, шаблон %q: %v", ep.Name, pattern, err)
+				return invalid("project %q, pattern %q: %v", ep.Name, pattern, err)
 			}
 		}
 		targetNames := map[string]bool{}
@@ -243,10 +243,10 @@ func (s *Service) validate(ctx context.Context, settings *Settings) error {
 				in.Secret = &et.Secret
 			}
 			if err := core.NormalizeTarget(&in, false); err != nil {
-				return invalid("проект %q, target %q: %v", ep.Name, et.Name, err)
+				return invalid("project %q, target %q: %v", ep.Name, et.Name, err)
 			}
 			if targetNames[in.Name] {
-				return invalid("проект %q: target %q встречается дважды", ep.Name, in.Name)
+				return invalid("project %q: target %q appears twice", ep.Name, in.Name)
 			}
 			targetNames[in.Name] = true
 			et.Name, et.URL, et.AuthKind, et.Username = in.Name, in.URL, in.AuthKind, in.Username
@@ -257,7 +257,7 @@ func (s *Service) validate(ctx context.Context, settings *Settings) error {
 	}
 	if len(conflicts) > 0 {
 		slices.Sort(conflicts)
-		return &core.ValidationError{Msg: "импорт отклонен: проекты уже существуют: " + strings.Join(conflicts, ", ")}
+		return &core.ValidationError{Msg: "import rejected: projects already exist: " + strings.Join(conflicts, ", ")}
 	}
 	return nil
 }

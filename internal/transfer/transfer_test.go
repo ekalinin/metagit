@@ -154,7 +154,7 @@ func TestImportRestoresSettingsAndKeepsHostingsSafe(t *testing.T) {
 
 	// The owner fills the project from a local copy: main matches the hosting.
 	out := dst.Push(work, "foo", "main")
-	if !strings.Contains(out, "github: доставлено") || strings.Contains(out, "расхождение") {
+	if !strings.Contains(out, "github: delivered") || strings.Contains(out, "diverged") {
 		t.Fatalf("push output:\n%s", out)
 	}
 	dst.WaitSynced(github.ID)
@@ -181,7 +181,7 @@ func TestImportIsAllOrNothing(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := dst.App.Transfer.Import(ctx, data, "wrong-passphrase")
-	if ve, ok := errors.AsType[*core.ValidationError](err); !ok || !strings.Contains(ve.Msg, "неверный пароль") {
+	if ve, ok := errors.AsType[*core.ValidationError](err); !ok || !strings.Contains(ve.Msg, "invalid password") {
 		t.Fatalf("wrong passphrase: %v", err)
 	}
 	damaged := bytes.Replace(data, []byte("\n"), []byte("\nAAAA"), 3)
@@ -192,7 +192,7 @@ func TestImportIsAllOrNothing(t *testing.T) {
 	dst.CreateProject("bar")
 	_, err = dst.App.Transfer.Import(ctx, data, passphrase)
 	ve, ok := errors.AsType[*core.ValidationError](err)
-	if !ok || !strings.Contains(ve.Msg, "проекты уже существуют: bar") {
+	if !ok || !strings.Contains(ve.Msg, "projects already exist: bar") {
 		t.Fatalf("conflict: %v", err)
 	}
 

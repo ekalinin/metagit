@@ -15,10 +15,10 @@ import (
 )
 
 // ErrInvalidName is returned for project names that are not allowed.
-var ErrInvalidName = errors.New("имя проекта может содержать только a-z, 0-9, '.', '_' и '-', не может начинаться с '.' или '-' и должно быть не длиннее 100 символов")
+var ErrInvalidName = errors.New("project name may contain only a-z, 0-9, '.', '_' and '-', must not start with '.' or '-' and must be at most 100 characters")
 
 // ErrExists is returned when the repository directory already exists.
-var ErrExists = errors.New("репозиторий уже существует")
+var ErrExists = errors.New("repository already exists")
 
 var nameRe = regexp.MustCompile(`^[a-z0-9_][a-z0-9._-]{0,99}$`)
 

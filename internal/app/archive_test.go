@@ -63,7 +63,7 @@ func TestDestructivePushCreatesArchive(t *testing.T) {
 	if got := testutil.RefOf(t, repo, list[0].ArchiveRef); got != c2 {
 		t.Fatalf("archive ref points to %q, want %q", got, c2)
 	}
-	if !strings.Contains(out, "прежнее состояние сохранено в "+list[0].ArchiveRef) {
+	if !strings.Contains(out, "previous state saved in "+list[0].ArchiveRef) {
 		t.Fatalf("push output does not mention the archive:\n%s", out)
 	}
 
@@ -118,7 +118,7 @@ func TestProtectedRefs(t *testing.T) {
 	testutil.Git(t, work, "checkout", "-q", "--orphan", "other")
 	x := testutil.Commit(t, work, "x")
 	out, err := e.PushErr(work, "foo", "--force", "other:main")
-	if err == nil || !strings.Contains(out, "refs/heads/main защищен") {
+	if err == nil || !strings.Contains(out, "refs/heads/main is protected") {
 		t.Fatalf("force-push to protected main: %v\n%s", err, out)
 	}
 	if got := testutil.RefOf(t, repo, "refs/heads/main"); got != a {
@@ -126,7 +126,7 @@ func TestProtectedRefs(t *testing.T) {
 	}
 
 	// Deletion of a protected branch.
-	if out, err := e.PushErr(work, "foo", ":main"); err == nil || !strings.Contains(out, "удаление запрещен") {
+	if out, err := e.PushErr(work, "foo", ":main"); err == nil || !strings.Contains(out, "deletion is not allowed") {
 		t.Fatalf("delete protected main: %v\n%s", err, out)
 	}
 
@@ -140,7 +140,7 @@ func TestProtectedRefs(t *testing.T) {
 
 	// Moving a protected tag.
 	testutil.Git(t, work, "tag", "-f", "v1.0", x)
-	if out, err := e.PushErr(work, "foo", "--force", "v1.0"); err == nil || !strings.Contains(out, "refs/tags/v1.0 защищен") {
+	if out, err := e.PushErr(work, "foo", "--force", "v1.0"); err == nil || !strings.Contains(out, "refs/tags/v1.0 is protected") {
 		t.Fatalf("move protected tag: %v\n%s", err, out)
 	}
 	if got := testutil.RefOf(t, repo, "refs/tags/v1.0"); got != a {
@@ -164,7 +164,7 @@ func TestProtectedRefs(t *testing.T) {
 
 	// The metagit namespace is closed for pushes.
 	out, err = e.PushErr(work, "foo", "main:refs/metagit/archive/anything")
-	if err == nil || !strings.Contains(out, "служебное пространство") {
+	if err == nil || !strings.Contains(out, "reserved namespace") {
 		t.Fatalf("push to refs/metagit/: %v\n%s", err, out)
 	}
 	if got := testutil.RefOf(t, repo, "refs/metagit/archive/anything"); got != "" {

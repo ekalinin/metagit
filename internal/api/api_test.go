@@ -46,7 +46,7 @@ func TestLoginAndSession(t *testing.T) {
 		t.Fatalf("projects without session: %d", status)
 	}
 	status, body := c.Do("POST", "/api/login", map[string]string{"name": apptest.OwnerName, "password": "wrong-password"})
-	if status != http.StatusUnauthorized || !strings.Contains(body, "неверное имя или пароль") {
+	if status != http.StatusUnauthorized || !strings.Contains(body, "invalid name or password") {
 		t.Fatalf("wrong password: %d %s", status, body)
 	}
 	if status, _ := c.Do("GET", "/api/projects", nil); status != http.StatusUnauthorized {
@@ -215,15 +215,15 @@ func TestTargetsAPI(t *testing.T) {
 
 	// Disabled target cannot be synced; validation errors are readable.
 	c.Do("PUT", path, map[string]any{"name": "github", "url": h.URL("foo"), "auth_kind": "https", "username": "x", "enabled": false})
-	if status, body := c.Do("POST", path+"/sync", nil); status != http.StatusBadRequest || !strings.Contains(body, "выключен") {
+	if status, body := c.Do("POST", path+"/sync", nil); status != http.StatusBadRequest || !strings.Contains(body, "is disabled") {
 		t.Fatalf("sync disabled: %d %s", status, body)
 	}
 	status, body = c.Do("POST", "/api/projects/foo/targets", map[string]any{"name": "bad", "url": "https://u:p@github.com/u/foo.git", "auth_kind": "none"})
-	if status != http.StatusBadRequest || !strings.Contains(body, "учетные данные в URL запрещены") {
+	if status != http.StatusBadRequest || !strings.Contains(body, "credentials in the URL are not allowed") {
 		t.Fatalf("secret in URL: %d %s", status, body)
 	}
 	status, body = c.Do("POST", "/api/projects/foo/targets", map[string]any{"name": "bad", "url": "git@host:u/foo.git", "auth_kind": "ssh", "secret": "not a key"})
-	if status != http.StatusBadRequest || !strings.Contains(body, "SSH-ключ") {
+	if status != http.StatusBadRequest || !strings.Contains(body, "SSH key") {
 		t.Fatalf("bad ssh key: %d %s", status, body)
 	}
 
@@ -253,7 +253,7 @@ func TestProtectedTokensAndKeysAPI(t *testing.T) {
 		t.Fatalf("bad pattern: %d", status)
 	}
 	testutil.Git(t, work, "commit", "-q", "--amend", "--allow-empty", "-m", "rewritten")
-	if out, err := e.PushErr(work, "foo", "--force", "main"); err == nil || !strings.Contains(out, "защищен") {
+	if out, err := e.PushErr(work, "foo", "--force", "main"); err == nil || !strings.Contains(out, "is protected") {
 		t.Fatalf("force-push after protection: %v\n%s", err, out)
 	}
 	_, body = c.Do("GET", "/api/projects/foo/protected", nil)
@@ -410,7 +410,7 @@ func TestExportImportAPI(t *testing.T) {
 	d := dst.LoggedIn()
 	data := base64.StdEncoding.EncodeToString([]byte(file))
 	status, body := d.Do("POST", "/api/import", map[string]string{"passphrase": "wrong-passphrase", "data": data})
-	if status != http.StatusBadRequest || !strings.Contains(body, "неверный пароль") {
+	if status != http.StatusBadRequest || !strings.Contains(body, "invalid password") {
 		t.Fatalf("wrong passphrase: %d %s", status, body)
 	}
 	status, body = d.Do("POST", "/api/import", map[string]string{"passphrase": "export-passphrase", "data": data})

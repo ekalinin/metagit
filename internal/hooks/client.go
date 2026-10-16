@@ -30,7 +30,7 @@ func RunHook(ctx context.Context, hook string, stdin io.Reader, stderr io.Writer
 	}
 	socket, project, pushID := getenv(EnvSocket), getenv(EnvProject), getenv(EnvPushID)
 	if socket == "" || project == "" || pushID == "" {
-		fmt.Fprintln(stderr, "metagit: push не через metagit: репозиторий принимает изменения только через сервис metagit")
+		fmt.Fprintln(stderr, "metagit: push bypasses metagit: the repository accepts changes only through the metagit service")
 		return 1
 	}
 	updates, err := ParseUpdates(stdin)
@@ -53,10 +53,10 @@ func RunHook(ctx context.Context, hook string, stdin io.Reader, stderr io.Writer
 	resp, err := call(ctx, socket, Request{Hook: hook, PushID: pushID, Project: project, Updates: updates})
 	if err != nil {
 		if hook == PreReceive {
-			fmt.Fprintln(stderr, "metagit: сервис недоступен, push отклонен:", err)
+			fmt.Fprintln(stderr, "metagit: service unavailable, push rejected:", err)
 			return 1
 		}
-		fmt.Fprintln(stderr, "metagit: не удалось получить статус доставки:", err)
+		fmt.Fprintln(stderr, "metagit: cannot get the delivery status:", err)
 		return 0
 	}
 	for _, m := range resp.Messages {

@@ -58,11 +58,11 @@ func TestCheck(t *testing.T) {
 	}
 	updates = append(updates, hooks.Update{Ref: "refs/heads/main", Kind: hooks.KindDelete})
 	msgs := Check(updates, []string{"refs/heads/main"})
-	if len(msgs) != 2 || !strings.Contains(msgs[0], "refs/heads/main защищен") {
+	if len(msgs) != 2 || !strings.Contains(msgs[0], "refs/heads/main is protected") {
 		t.Fatalf("msgs = %v", msgs)
 	}
 	msgs = Check([]hooks.Update{{Ref: "refs/metagit/archive/x", Kind: hooks.KindCreate}}, nil)
-	if len(msgs) == 0 || !strings.Contains(msgs[0], "служебное пространство") {
+	if len(msgs) == 0 || !strings.Contains(msgs[0], "reserved namespace") {
 		t.Fatalf("msgs = %v", msgs)
 	}
 }

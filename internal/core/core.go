@@ -75,7 +75,7 @@ func (s *Service) CreateProject(ctx context.Context, name string) (*store.Projec
 	if err := s.Repos.Create(ctx, name); err != nil {
 		_ = s.Store.DeleteProject(context.WithoutCancel(ctx), p.ID)
 		if errors.Is(err, repo.ErrExists) {
-			return nil, fmt.Errorf("каталог репозитория %s уже существует на диске: %w", s.Repos.Path(name), ErrConflict)
+			return nil, fmt.Errorf("repository directory %s already exists on disk: %w", s.Repos.Path(name), ErrConflict)
 		}
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (s *Service) DeleteProject(ctx context.Context, name, confirm string) error
 		return err
 	}
 	if confirm != name {
-		return invalid("для удаления введите имя проекта %q", name)
+		return invalid("to delete, type the project name %q", name)
 	}
 	targets, err := s.Store.ListTargets(ctx, p.ID)
 	if err != nil {
@@ -124,33 +124,33 @@ func NormalizeTarget(in *TargetInput, haveSecret bool) error {
 	in.Username = strings.TrimSpace(in.Username)
 	in.AuthKind = cmp.Or(in.AuthKind, store.AuthNone)
 	if in.Name == "" || utf8.RuneCountInString(in.Name) > 100 {
-		return invalid("имя target'а должно быть непустым и не длиннее 100 символов")
+		return invalid("target name must be non-empty and at most 100 characters")
 	}
 	if err := replicate.ValidateURL(in.URL); err != nil {
 		return &ValidationError{Msg: err.Error()}
 	}
 	if !slices.Contains([]string{store.AuthNone, store.AuthHTTPS, store.AuthSSH}, in.AuthKind) {
-		return invalid("вид учетных данных должен быть none, https или ssh")
+		return invalid("credentials kind must be none, https or ssh")
 	}
 	if in.AuthKind == store.AuthNone {
 		return nil
 	}
 	if in.Secret == nil {
 		if !haveSecret {
-			return invalid("укажите учетные данные: токен для https или приватный SSH-ключ для ssh")
+			return invalid("credentials are required: a token for https or a private SSH key for ssh")
 		}
 		return nil
 	}
 	secret := strings.TrimSpace(*in.Secret)
 	if secret == "" {
-		return invalid("учетные данные не должны быть пустыми")
+		return invalid("credentials must not be empty")
 	}
 	if in.AuthKind == store.AuthSSH {
 		if _, err := ssh.ParseRawPrivateKey([]byte(secret)); err != nil {
 			if _, ok := errors.AsType[*ssh.PassphraseMissingError](err); ok {
-				return invalid("SSH-ключ защищен паролем: нужен ключ без пароля")
+				return invalid("SSH key is protected by a passphrase: a key without a passphrase is required")
 			}
-			return invalid("не удалось прочитать приватный SSH-ключ: %v", err)
+			return invalid("cannot parse the private SSH key: %v", err)
 		}
 		secret += "\n"
 	}
@@ -252,7 +252,7 @@ func (s *Service) SyncTarget(ctx context.Context, projectName string, id int64) 
 		return err
 	}
 	if !t.Enabled {
-		return invalid("target %s выключен", t.Name)
+		return invalid("target %s is disabled", t.Name)
 	}
 	s.Replicator.Trigger(ctx, t.ID)
 	return nil
@@ -330,11 +330,11 @@ func (s *Service) PostReceive(ctx context.Context, projectName, pushID string, _
 	var msgs []string
 	archived, err := s.Archive.Complete(ctx, p, pushID)
 	for _, a := range archived {
-		msgs = append(msgs, fmt.Sprintf("metagit: %s: прежнее состояние сохранено в %s", a.OrigRef, a.ArchiveRef))
+		msgs = append(msgs, fmt.Sprintf("metagit: %s: previous state saved in %s", a.OrigRef, a.ArchiveRef))
 	}
 	if err != nil {
 		s.Log.Error("archive failed", "project", p.Name, "err", err)
-		msgs = append(msgs, "metagit: не удалось создать архив, он будет создан при следующем запуске: "+err.Error())
+		msgs = append(msgs, "metagit: cannot create the archive, it will be created on the next start: "+err.Error())
 	}
 
 	tickets, err := s.Replicator.TriggerProject(ctx, p.ID)
@@ -342,7 +342,7 @@ func (s *Service) PostReceive(ctx context.Context, projectName, pushID string, _
 		return hooks.Response{}, err
 	}
 	if len(tickets) == 0 {
-		msgs = append(msgs, "metagit: включенных target'ов нет, изменения сохранены только в metagit")
+		msgs = append(msgs, "metagit: no enabled targets, the changes are saved only in metagit")
 		return hooks.Response{Allow: true, Messages: msgs}, nil
 	}
 	targets, err := s.Store.ListTargets(ctx, p.ID)
@@ -366,19 +366,19 @@ func (s *Service) PostReceive(ctx context.Context, projectName, pushID string, _
 func FormatResult(name string, res replicate.Result, done bool) string {
 	prefix := "metagit: " + name + ": "
 	if !done {
-		return prefix + "в очереди"
+		return prefix + "queued"
 	}
 	switch res.Status {
 	case replicate.StatusDelivered:
-		return prefix + "доставлено"
+		return prefix + "delivered"
 	case replicate.StatusDiverged:
-		return prefix + "доставлено; расхождение, состояние хостинга сохранено в " + strings.Join(res.Archives, ", ")
+		return prefix + "delivered; diverged, hosting state saved in " + strings.Join(res.Archives, ", ")
 	case replicate.StatusError:
 		msg, _, _ := strings.Cut(res.Error, "\n")
 		if utf8.RuneCountInString(msg) > 200 {
 			msg = string([]rune(msg)[:200]) + "..."
 		}
-		return prefix + "ошибка: " + msg + " (повтор позже)"
+		return prefix + "error: " + msg + " (retry later)"
 	default:
 		return prefix + string(res.Status)
 	}

@@ -350,7 +350,7 @@ func (r *Replicator) deliver(ctx context.Context, id int64) Result {
 		}
 		if t.State != store.StateError || t.LastError != msg {
 			_ = r.store.AddEvent(ctx, &store.Event{ProjectID: project.ID, TargetID: t.ID, TargetName: t.Name,
-				Kind: store.EventDeliveryError, Message: "ошибка доставки: " + msg})
+				Kind: store.EventDeliveryError, Message: "delivery error: " + msg})
 		}
 		r.log.Warn("delivery failed", "project", project.Name, "target", t.Name, "attempt", attempt, "err", msg)
 		return res
@@ -407,7 +407,7 @@ func (u *run) prepare() error {
 	switch u.target.AuthKind {
 	case store.AuthHTTPS:
 		if len(secret) == 0 {
-			return errors.New("токен не задан")
+			return errors.New("token is not set")
 		}
 		u.secrets = append(u.secrets, string(secret))
 		u.env = append(u.env,
@@ -417,7 +417,7 @@ func (u *run) prepare() error {
 		)
 	case store.AuthSSH:
 		if len(secret) == 0 {
-			return errors.New("SSH-ключ не задан")
+			return errors.New("SSH key is not set")
 		}
 		f, err := os.CreateTemp(u.r.opts.TmpDir, "key-*")
 		if err != nil {
@@ -497,7 +497,7 @@ func (u *run) reconcile(ctx context.Context) error {
 			for i, o := range ops {
 				names[i] = o.ref
 			}
-			failures = append(failures, "refs на хостинге продолжают меняться: "+strings.Join(names, ", "))
+			failures = append(failures, "refs on the hosting keep changing: "+strings.Join(names, ", "))
 			break
 		}
 		var retry []op
@@ -510,7 +510,7 @@ func (u *run) reconcile(ctx context.Context) error {
 				res, ok := results[o.ref]
 				switch {
 				case !ok:
-					failures = append(failures, o.ref+": нет ответа хостинга")
+					failures = append(failures, o.ref+": no response from the hosting")
 				case res.status == refOK:
 					if err := u.record(ctx, o.ref, o.object); err != nil {
 						return err
@@ -616,18 +616,18 @@ func (u *run) diverged(ctx context.Context, o op) (*op, error) {
 		return nil, err
 	}
 	u.archives = append(u.archives, name)
-	what := "ветка"
+	what := "branch"
 	if strings.HasPrefix(o.ref, "refs/tags/") {
-		what = "тег"
+		what = "tag"
 	}
-	action := "перезаписывается значением из metagit"
+	action := "is overwritten with the value from metagit"
 	if o.object == "" {
-		action = "удаляется, как в metagit"
+		action = "is deleted, as in metagit"
 	}
 	err = u.r.store.AddEvent(ctx, &store.Event{
 		ProjectID: u.project.ID, TargetID: u.target.ID, TargetName: u.target.Name,
 		Kind: store.EventDiverged, Ref: o.ref, ArchiveRef: name,
-		Message: fmt.Sprintf("%s %s на target'е %s разошлась с metagit: состояние хостинга %s сохранено в %s, ref %s",
+		Message: fmt.Sprintf("%s %s on target %s diverged from metagit: hosting state %s saved in %s, ref %s",
 			what, o.ref, u.target.Name, short(fetched), name, action),
 	})
 	if err != nil {
@@ -665,7 +665,7 @@ func (u *run) fetch(ctx context.Context, ref string) (string, error) {
 		return "", err
 	}
 	if oid == "" {
-		return "", fmt.Errorf("%s не найден на хостинге при получении", ref)
+		return "", fmt.Errorf("%s not found on the hosting when fetching", ref)
 	}
 	return oid, nil
 }
@@ -674,7 +674,7 @@ func (u *run) fetch(ctx context.Context, ref string) (string, error) {
 func gitError(err error) error {
 	if gerr, ok := errors.AsType[*gitcmd.Error](err); ok {
 		if errors.Is(gerr.Err, context.DeadlineExceeded) {
-			return errors.New("превышено время ожидания хостинга")
+			return errors.New("timed out waiting for the hosting")
 		}
 		msg := strings.TrimSpace(gerr.Stderr)
 		if msg == "" {

@@ -164,7 +164,7 @@ func (s *Server) serveHook(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		s.log.Error("hook failed", "hook", req.Hook, "project", req.Project, "err", err)
-		resp = Response{Allow: false, Messages: []string{"metagit: внутренняя ошибка: " + strings.TrimSpace(err.Error())}}
+		resp = Response{Allow: false, Messages: []string{"metagit: internal error: " + strings.TrimSpace(err.Error())}}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)

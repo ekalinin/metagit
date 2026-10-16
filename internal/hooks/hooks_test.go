@@ -134,7 +134,7 @@ func TestHookWithUnknownPushOrWithoutService(t *testing.T) {
 	if code := RunHook(t.Context(), PreReceive, strings.NewReader(""), &stderr, func(string) string { return "" }); code == 0 {
 		t.Fatal("push outside metagit must be rejected")
 	}
-	if !strings.Contains(stderr.String(), "только через сервис metagit") {
+	if !strings.Contains(stderr.String(), "only through the metagit service") {
 		t.Fatalf("stderr = %q", stderr.String())
 	}
 }
