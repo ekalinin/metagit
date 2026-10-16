@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, errorText, onUnauthorized, type Session } from './api'
+import { useLocale, useT } from './locale'
 import { LoginPage } from './pages/LoginPage'
 import { ProjectPage } from './pages/ProjectPage'
 import { ProjectsPage } from './pages/ProjectsPage'
@@ -8,6 +9,8 @@ import { Link, loginPath, matchRoute, navigate, safeNext, useLocation, type Rout
 import { setThemeMode, storedThemeMode, type ThemeMode } from './theme'
 
 export function App() {
+  const text = useT()
+  const locale = useLocale()
   const location = useLocation()
   const route = matchRoute(location.pathname)
   const [session, setSession] = useState<Session | null>(null)
@@ -29,6 +32,10 @@ export function App() {
     }
   }, [attempt])
 
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
+
   useEffect(
     () => onUnauthorized(() => setSession((s) => s && { owner_exists: s.owner_exists, authenticated: false })),
     [],
@@ -44,11 +51,11 @@ export function App() {
   }, [needLogin, leaveLogin, wanted, location.search])
 
   if (session === null) {
-    if (!sessionError) return <p className="loading">Загрузка...</p>
+    if (!sessionError) return <p className="loading">{text.common.loading}</p>
     return (
       <main className="page">
         <p className="message message-error" role="alert">
-          Не удалось связаться с сервером: {sessionError}
+          {text.app.connectionFailed(sessionError)}
         </p>
         <button
           type="button"
@@ -57,12 +64,12 @@ export function App() {
             setAttempt((n) => n + 1)
           }}
         >
-          Повторить
+          {text.app.retry}
         </button>
       </main>
     )
   }
-  if (needLogin || leaveLogin) return <p className="loading">Загрузка...</p>
+  if (needLogin || leaveLogin) return <p className="loading">{text.common.loading}</p>
 
   if (route.page === 'login') {
     return (
@@ -91,6 +98,7 @@ export function App() {
 }
 
 function Page({ route }: { route: Route }) {
+  const text = useT()
   switch (route.page) {
     case 'projects':
       return <ProjectsPage />
@@ -101,9 +109,9 @@ function Page({ route }: { route: Route }) {
     default:
       return (
         <section>
-          <h1>Страница не найдена</h1>
+          <h1>{text.app.notFound}</h1>
           <p>
-            <Link to="/">Перейти к списку проектов</Link>
+            <Link to="/">{text.common.toProjects}</Link>
           </p>
         </section>
       )
@@ -117,6 +125,7 @@ interface HeaderProps {
 }
 
 function Header({ route, ownerName, onLoggedOut }: HeaderProps) {
+  const text = useT()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -140,54 +149,51 @@ function Header({ route, ownerName, onLoggedOut }: HeaderProps) {
         </Link>
         <nav className="topnav">
           <Link to="/" current={route.page === 'projects' || route.page === 'project'}>
-            Проекты
+            {text.app.projects}
           </Link>
           <Link to="/settings" current={route.page === 'settings'}>
-            Настройки
+            {text.app.settings}
           </Link>
         </nav>
         <div className="topbar-user">
           <ThemeSwitch />
           {ownerName && <span className="muted">{ownerName}</span>}
           <button type="button" className="secondary small" disabled={busy} onClick={() => void logout()}>
-            Выйти
+            {text.app.logout}
           </button>
         </div>
       </div>
       {error && (
         <p className="message message-error topbar-error" role="alert">
-          Не удалось выйти: {error}
+          {text.app.logoutFailed(error)}
         </p>
       )}
     </header>
   )
 }
 
-const themeModes: { mode: ThemeMode; label: string }[] = [
-  { mode: 'system', label: 'Системная' },
-  { mode: 'light', label: 'Светлая' },
-  { mode: 'dark', label: 'Темная' },
-]
+const themeModes: ThemeMode[] = ['system', 'light', 'dark']
 
 function ThemeSwitch() {
+  const text = useT()
   const [mode, setMode] = useState(storedThemeMode)
 
   return (
     <fieldset className="theme-switch">
-      <legend className="visually-hidden">Тема</legend>
+      <legend className="visually-hidden">{text.app.theme}</legend>
       {themeModes.map((m) => (
-        <label key={m.mode}>
+        <label key={m}>
           <input
             type="radio"
             name="theme"
-            value={m.mode}
-            checked={mode === m.mode}
+            value={m}
+            checked={mode === m}
             onChange={() => {
-              setThemeMode(m.mode)
-              setMode(m.mode)
+              setThemeMode(m)
+              setMode(m)
             }}
           />
-          <span>{m.label}</span>
+          <span>{text.app.themeModes[m]}</span>
         </label>
       ))}
     </fieldset>

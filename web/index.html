@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,6 +11,23 @@
         var mode = localStorage.getItem('metagit.theme')
         if (mode === 'light' || mode === 'dark') document.documentElement.dataset.theme = mode
       } catch (e) {}
+      // Set the interface language by the same rule as src/locale.ts.
+      var lang = null
+      try {
+        lang = localStorage.getItem('metagit.locale')
+      } catch (e) {}
+      if (lang !== 'ru' && lang !== 'en') {
+        lang = 'en'
+        var tags = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]
+        for (var i = 0; i < tags.length; i++) {
+          var primary = String(tags[i] || '').split('-')[0].toLowerCase()
+          if (primary === 'ru' || primary === 'en') {
+            lang = primary
+            break
+          }
+        }
+      }
+      document.documentElement.lang = lang
     </script>
   </head>
   <body>

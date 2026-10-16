@@ -1,8 +1,7 @@
 import { useId, useState } from 'react'
 import { api, errorText, type AuthKind, type Target, type TargetInput } from '../api'
+import { useT } from '../locale'
 import { authKindLabel, ErrorMessage, Field } from '../ui'
-
-export const KEEP_SECRET_PLACEHOLDER = 'задан, оставьте пустым, чтобы не менять'
 
 interface Props {
   project: string
@@ -15,6 +14,7 @@ interface Props {
 const authKinds: AuthKind[] = ['none', 'https', 'ssh']
 
 export function TargetForm({ project, target, onSaved, onCancel }: Props) {
+  const text = useT()
   // The form keeps its own copy of the values, so background refreshes of the
   // target list do not overwrite what the user is typing.
   const [name, setName] = useState(target?.name ?? '')
@@ -61,15 +61,12 @@ export function TargetForm({ project, target, onSaved, onCancel }: Props) {
         void submit()
       }}
     >
-      <h3 id={id + '-title'}>{target ? `Изменение target'а ${target.name}` : 'Новый target'}</h3>
+      <h3 id={id + '-title'}>{target ? text.targetForm.editTitle(target.name) : text.targetForm.newTitle}</h3>
       <div className="grid">
-        <Field label="Имя">
+        <Field label={text.common.name}>
           <input value={name} required placeholder="github" onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field
-          label="URL репозитория"
-          hint="https://..., ssh://... или user@host:path. Не указывайте логин, пароль или токен в URL."
-        >
+        <Field label={text.targetForm.url} hint={text.targetForm.urlHint}>
           <input
             className="mono"
             value={url}
@@ -79,7 +76,7 @@ export function TargetForm({ project, target, onSaved, onCancel }: Props) {
             onChange={(e) => setURL(e.target.value)}
           />
         </Field>
-        <Field label="Учетные данные">
+        <Field label={text.project.credentials}>
           <select
             value={authKind}
             onChange={(e) => {
@@ -96,7 +93,7 @@ export function TargetForm({ project, target, onSaved, onCancel }: Props) {
         </Field>
         {authKind === 'https' && (
           <>
-            <Field label="Логин">
+            <Field label={text.targetForm.username}>
               <input
                 value={username}
                 autoComplete="off"
@@ -104,13 +101,13 @@ export function TargetForm({ project, target, onSaved, onCancel }: Props) {
                 onChange={(e) => setUsername(e.target.value)}
               />
             </Field>
-            <Field label="Токен">
+            <Field label={text.targetForm.token}>
               <input
                 type="password"
                 value={secret}
                 autoComplete="new-password"
                 required={!keepSecret}
-                placeholder={keepSecret ? KEEP_SECRET_PLACEHOLDER : ''}
+                placeholder={keepSecret ? text.targetForm.keepSecret : ''}
                 onChange={(e) => setSecret(e.target.value)}
               />
             </Field>
@@ -118,7 +115,7 @@ export function TargetForm({ project, target, onSaved, onCancel }: Props) {
         )}
       </div>
       {authKind === 'ssh' && (
-        <Field label="Приватный SSH-ключ" hint="Ключ без пароля.">
+        <Field label={text.targetForm.sshKey} hint={text.targetForm.sshKeyHint}>
           <textarea
             className="mono"
             value={secret}
@@ -126,25 +123,23 @@ export function TargetForm({ project, target, onSaved, onCancel }: Props) {
             autoComplete="off"
             spellCheck={false}
             required={!keepSecret}
-            placeholder={keepSecret ? KEEP_SECRET_PLACEHOLDER : '-----BEGIN OPENSSH PRIVATE KEY-----'}
+            placeholder={keepSecret ? text.targetForm.keepSecret : '-----BEGIN OPENSSH PRIVATE KEY-----'}
             onChange={(e) => setSecret(e.target.value)}
           />
         </Field>
       )}
-      {authKind !== 'none' && (
-        <p className="hint">Учетные данные можно задать или заменить, но не посмотреть.</p>
-      )}
+      {authKind !== 'none' && <p className="hint">{text.targetForm.writeOnly}</p>}
       <label className="checkbox">
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-        <span>Включен</span>
+        <span>{text.project.enabled}</span>
       </label>
       <ErrorMessage text={error} />
       <div className="buttons">
         <button type="submit" disabled={busy}>
-          {target ? 'Сохранить' : 'Добавить target'}
+          {target ? text.targetForm.save : text.project.addTarget}
         </button>
         <button type="button" className="secondary" onClick={onCancel}>
-          Отмена
+          {text.common.cancel}
         </button>
       </div>
     </form>

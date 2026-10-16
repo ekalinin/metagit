@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, errorText } from '../api'
+import { useT } from '../locale'
 import { ErrorMessage, Field } from '../ui'
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function LoginPage({ ownerExists, onLoggedIn }: Props) {
+  const text = useT()
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -18,14 +20,12 @@ export function LoginPage({ ownerExists, onLoggedIn }: Props) {
       <main className="login">
         <div className="card login-card">
           <p className="brand">metagit</p>
-          <h1>Владелец не создан</h1>
-          <p>
-            Учетная запись владельца создается на сервере, а не в браузере. Выполните на сервере команду:
-          </p>
+          <h1>{text.login.ownerMissing}</h1>
+          <p>{text.login.ownerCreate}</p>
           <pre>
-            <code>metagit owner create --name &lt;имя&gt;</code>
+            <code>{text.login.ownerCommand}</code>
           </pre>
-          <p>После этого обновите страницу и войдите.</p>
+          <p>{text.login.ownerThen}</p>
         </div>
       </main>
     )
@@ -47,14 +47,14 @@ export function LoginPage({ ownerExists, onLoggedIn }: Props) {
     <main className="login">
       <div className="card login-card">
         <p className="brand">metagit</p>
-        <h1>Вход</h1>
+        <h1>{text.login.title}</h1>
         <form
           onSubmit={(e) => {
             e.preventDefault()
             void submit()
           }}
         >
-          <Field label="Имя">
+          <Field label={text.common.name}>
             <input
               name="name"
               autoComplete="username"
@@ -64,7 +64,7 @@ export function LoginPage({ ownerExists, onLoggedIn }: Props) {
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
-          <Field label="Пароль">
+          <Field label={text.login.password}>
             <input
               name="password"
               type="password"
@@ -76,7 +76,7 @@ export function LoginPage({ ownerExists, onLoggedIn }: Props) {
           </Field>
           <ErrorMessage text={error} />
           <button type="submit" disabled={busy}>
-            Войти
+            {text.login.submit}
           </button>
         </form>
       </div>

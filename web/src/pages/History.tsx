@@ -1,11 +1,6 @@
 import type { ArchiveEntry, EventKind, ProjectEvent } from '../api'
+import { useT } from '../locale'
 import { formatTime, Lamp, type LampTone } from '../ui'
-
-const eventLabels: Record<EventKind, string> = {
-  delivery_error: 'ошибка доставки',
-  diverged: 'расхождение',
-  archive_push: 'архив при push',
-}
 
 const eventTones: Record<EventKind, LampTone> = {
   delivery_error: 'err',
@@ -14,22 +9,23 @@ const eventTones: Record<EventKind, LampTone> = {
 }
 
 export function EventLog({ events }: { events: ProjectEvent[] }) {
+  const text = useT()
   return (
     <section className="card">
-      <h2>Журнал событий</h2>
+      <h2>{text.history.eventLog}</h2>
       {events.length === 0 ? (
-        <p className="muted">Событий пока нет.</p>
+        <p className="muted">{text.history.noEvents}</p>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Время</th>
-                <th>Событие</th>
+                <th>{text.history.time}</th>
+                <th>{text.history.event}</th>
                 <th>Target</th>
                 <th>Ref</th>
-                <th>Архивный ref</th>
-                <th>Сообщение</th>
+                <th>{text.history.archiveRef}</th>
+                <th>{text.history.message}</th>
               </tr>
             </thead>
             <tbody>
@@ -39,7 +35,7 @@ export function EventLog({ events }: { events: ProjectEvent[] }) {
                   <td>
                     <span className={`state event-${e.kind}`}>
                       <Lamp tone={eventTones[e.kind] ?? 'neutral'} />
-                      {eventLabels[e.kind] ?? e.kind}
+                      {text.labels.events[e.kind] ?? e.kind}
                     </span>
                   </td>
                   <td>{e.target_name}</td>
@@ -57,21 +53,22 @@ export function EventLog({ events }: { events: ProjectEvent[] }) {
 }
 
 export function ArchiveList({ entries }: { entries: ArchiveEntry[] }) {
+  const text = useT()
   return (
     <section className="card">
-      <h2>Архив</h2>
+      <h2>{text.history.archive}</h2>
       {entries.length === 0 ? (
-        <p className="muted">Архив пуст.</p>
+        <p className="muted">{text.history.archiveEmpty}</p>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Время</th>
-                <th>Источник</th>
-                <th>Исходный ref</th>
-                <th>Объект</th>
-                <th>Команда для получения</th>
+                <th>{text.history.time}</th>
+                <th>{text.history.source}</th>
+                <th>{text.history.origRef}</th>
+                <th>{text.history.object}</th>
+                <th>{text.history.fetchCommand}</th>
               </tr>
             </thead>
             <tbody>

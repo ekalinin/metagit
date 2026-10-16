@@ -9,6 +9,7 @@ import {
   type Target,
   type TargetInput,
 } from '../api'
+import { useT } from '../locale'
 import { Link } from '../router'
 import { authKindLabel, ErrorMessage, formatTime, Lamp, Notice, StateBadge, stateTone } from '../ui'
 import { ArchiveList, EventLog } from './History'
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function ProjectPage({ name, refreshMs = 5000 }: Props) {
+  const text = useT()
   const [details, setDetails] = useState<ProjectDetails | null>(null)
   const [events, setEvents] = useState<ProjectEvent[]>([])
   const [archive, setArchive] = useState<ArchiveEntry[]>([])
@@ -57,9 +59,9 @@ export function ProjectPage({ name, refreshMs = 5000 }: Props) {
   if (notFound) {
     return (
       <section>
-        <h1>Проект {name} не найден</h1>
+        <h1>{text.project.notFound(name)}</h1>
         <p>
-          <Link to="/">Перейти к списку проектов</Link>
+          <Link to="/">{text.common.toProjects}</Link>
         </p>
       </section>
     )
@@ -68,17 +70,17 @@ export function ProjectPage({ name, refreshMs = 5000 }: Props) {
   return (
     <>
       <p className="breadcrumbs">
-        <Link to="/">Проекты</Link> / {name}
+        <Link to="/">{text.app.projects}</Link> / {name}
       </p>
       <h1 className="project-name">{name}</h1>
       <ErrorMessage text={error} />
       {details === null ? (
-        !error && <p className="muted">Загрузка...</p>
+        !error && <p className="muted">{text.common.loading}</p>
       ) : (
         <>
           {/* The clone addresses are the source of the delivery lines drawn below. */}
           <section className="card source">
-            <h2>Адреса для клонирования</h2>
+            <h2>{text.projects.cloneAddresses}</h2>
             <dl className="clone">
               <dt>HTTP(S)</dt>
               <dd>
@@ -109,6 +111,7 @@ interface TargetsProps {
 }
 
 function Targets({ project, targets, reload }: TargetsProps) {
+  const text = useT()
   const [form, setForm] = useState<FormState>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -141,14 +144,14 @@ function Targets({ project, targets, reload }: TargetsProps) {
     void act(
       target,
       () => api.updateTarget(project, target.id, input),
-      target.enabled ? `Target ${target.name} выключен.` : `Target ${target.name} включен.`,
+      target.enabled ? text.project.targetDisabled(target.name) : text.project.targetEnabled(target.name),
     )
   }
 
   function remove(target: Target) {
-    if (!window.confirm(`Удалить target ${target.name}? Репозиторий на хостинге не изменится.`)) return
+    if (!window.confirm(text.project.confirmDelete(target.name))) return
     if (form?.mode === 'edit' && form.target.id === target.id) setForm(null)
-    void act(target, () => api.deleteTarget(project, target.id), `Target ${target.name} удален.`)
+    void act(target, () => api.deleteTarget(project, target.id), text.project.targetDeleted(target.name))
   }
 
   return (
@@ -156,20 +159,17 @@ function Targets({ project, targets, reload }: TargetsProps) {
       {/* The trunk runs down the left gutter and branches into every row; without targets it ends in a buffer stop. */}
       <div className={targets.length === 0 ? 'track-head dead-end' : 'track-head'}>
         <div className="section-head">
-          <h2>Target'ы</h2>
+          <h2>{text.projects.targets}</h2>
           {form?.mode !== 'add' && (
             <button type="button" className="small" onClick={() => setForm({ mode: 'add' })}>
-              Добавить target
+              {text.project.addTarget}
             </button>
           )}
         </div>
-        <p className="muted">
-          Хостинги, на которые metagit доставляет ветки и теги проекта. Удаление target'а не трогает репозиторий на
-          хостинге.
-        </p>
+        <p className="muted">{text.project.targetsHint}</p>
         <ErrorMessage text={error} />
         <Notice text={notice} />
-        {targets.length === 0 && <p className="muted">Target'ов пока нет.</p>}
+        {targets.length === 0 && <p className="muted">{text.project.noTargets}</p>}
       </div>
       {targets.length > 0 && (
         <div className="table-wrap">
@@ -177,13 +177,13 @@ function Targets({ project, targets, reload }: TargetsProps) {
             <thead>
               <tr>
                 <th className="track" aria-hidden="true" />
-                <th>Имя</th>
-                <th>Состояние</th>
-                <th>Последняя успешная доставка</th>
+                <th>{text.common.name}</th>
+                <th>{text.project.state}</th>
+                <th>{text.project.lastSuccess}</th>
                 <th>URL</th>
-                <th>Учетные данные</th>
-                <th>Включен</th>
-                <th aria-label="Действия" />
+                <th>{text.project.credentials}</th>
+                <th>{text.project.enabled}</th>
+                <th aria-label={text.common.actions} />
               </tr>
             </thead>
             <tbody>
@@ -198,14 +198,14 @@ function Targets({ project, targets, reload }: TargetsProps) {
                     <StateBadge state={t.state} />
                     {t.last_error && <div className="target-error">{t.last_error}</div>}
                     {t.state === 'error' && t.next_attempt_at && (
-                      <div className="muted small">следующая попытка: {formatTime(t.next_attempt_at)}</div>
+                      <div className="muted small">{text.project.nextAttempt(formatTime(t.next_attempt_at))}</div>
                     )}
                   </td>
                   <td className="nowrap">
                     {t.last_success_at ? (
                       <span className="mono">{formatTime(t.last_success_at)}</span>
                     ) : (
-                      <span className="muted">не было</span>
+                      <span className="muted">{text.project.never}</span>
                     )}
                   </td>
                   <td>
@@ -213,46 +213,48 @@ function Targets({ project, targets, reload }: TargetsProps) {
                   </td>
                   <td>
                     {authKindLabel(t.auth_kind)}
-                    {t.auth_kind === 'https' && t.username && <div className="muted small">логин {t.username}</div>}
+                    {t.auth_kind === 'https' && t.username && (
+                      <div className="muted small">{text.project.username(t.username)}</div>
+                    )}
                   </td>
-                  <td>{t.enabled ? 'да' : 'нет'}</td>
+                  <td>{t.enabled ? text.project.yes : text.project.no}</td>
                   <td className="actions">
                     <button
                       type="button"
                       className="small"
                       disabled={busyId === t.id || !t.enabled}
-                      title={t.enabled ? undefined : 'Target выключен'}
+                      title={t.enabled ? undefined : text.project.targetOff}
                       onClick={() =>
-                        void act(t, () => api.syncTarget(project, t.id), `Доставка на ${t.name} запущена.`)
+                        void act(t, () => api.syncTarget(project, t.id), text.project.syncStarted(t.name))
                       }
                     >
-                      Доставить сейчас
+                      {text.project.syncNow}
                     </button>
                     <button
                       type="button"
                       className="secondary small"
-                      aria-label={`Изменить ${t.name}`}
+                      aria-label={text.project.editNamed(t.name)}
                       onClick={() => setForm({ mode: 'edit', target: t })}
                     >
-                      Изменить
+                      {text.project.edit}
                     </button>
                     <button
                       type="button"
                       className="secondary small"
                       disabled={busyId === t.id}
-                      aria-label={`${t.enabled ? 'Выключить' : 'Включить'} ${t.name}`}
+                      aria-label={`${t.enabled ? text.project.disable : text.project.enable} ${t.name}`}
                       onClick={() => toggle(t)}
                     >
-                      {t.enabled ? 'Выключить' : 'Включить'}
+                      {t.enabled ? text.project.disable : text.project.enable}
                     </button>
                     <button
                       type="button"
                       className="danger small"
                       disabled={busyId === t.id}
-                      aria-label={`Удалить ${t.name}`}
+                      aria-label={text.common.deleteNamed(t.name)}
                       onClick={() => remove(t)}
                     >
-                      Удалить
+                      {text.common.delete}
                     </button>
                   </td>
                 </tr>
@@ -270,7 +272,9 @@ function Targets({ project, targets, reload }: TargetsProps) {
           onSaved={(saved) => {
             setForm(null)
             setError('')
-            setNotice(form.mode === 'edit' ? `Target ${saved.name} сохранен.` : `Target ${saved.name} добавлен.`)
+            setNotice(
+              form.mode === 'edit' ? text.project.targetSaved(saved.name) : text.project.targetAdded(saved.name),
+            )
             void reload()
           }}
         />

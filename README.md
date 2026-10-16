@@ -47,7 +47,7 @@ Requirements, building, installing on a server and `metagit serve` settings are 
 The web console is in Russian for now, its labels are given in quotes.
 
 1. Open the web console and sign in.
-2. In Settings ("Настройки"), create a git access token (it is shown once) and, if you need SSH, add your public key.
+2. In Settings, create a git access token (it is shown once) and, if you need SSH, add your public key.
 3. Create a project. Its page shows the clone addresses:
 
    ```sh
@@ -79,9 +79,9 @@ git branch feature-restored FETCH_HEAD
 
 ### Recovering after losing the server
 
-1. Export the settings in advance (Settings → Export, "Настройки" → "Экспорт"). The file is encrypted with the password you enter on export (the [age](https://age-encryption.org) format, it can also be opened with `age -d`). It contains the hosting credentials, keep it accordingly.
+1. Export the settings in advance (Settings → Export). The file is encrypted with the password you enter on export (the [age](https://age-encryption.org) format, it can also be opened with `age -d`). It contains the hosting credentials, keep it accordingly.
 2. On the new server, install metagit and create the owner.
-3. Import the file (Settings → Import, "Настройки" → "Импорт"). Projects appear with empty repositories, their protected refs and targets. Until the first push, metagit changes nothing on the hostings.
+3. Import the file (Settings → Import). Projects appear with empty repositories, their protected refs and targets. Until the first push, metagit changes nothing on the hostings.
 4. Fill the projects from a local copy or from any live mirror:
 
    ```sh

@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
+import { LOCALE_KEY } from './locale'
 import { fail, goTo, mockFetch, ok } from './test-utils'
 import { THEME_KEY } from './theme'
 
@@ -177,5 +178,97 @@ describe('theme switch', () => {
     expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Тема' })).not.toBeInTheDocument()
     expect(document.documentElement.dataset.theme).toBe('dark')
+  })
+})
+
+describe('interface language', () => {
+  const settingsRoutes = {
+    'GET /api/session': loggedIn,
+    'GET /api/tokens': ok([{ id: 1, name: 'laptop', created_at: '2026-10-15T09:00:00Z' }]),
+    'GET /api/ssh-keys': ok([]),
+  }
+
+  test('a Russian browser gets the Russian interface and lang', async () => {
+    goTo('/login')
+    mockFetch({ 'GET /api/session': loggedOut })
+    render(<App />)
+
+    expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('lang', 'ru')
+  })
+
+  test('an unsupported browser language gets English', async () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['de'])
+    goTo('/login')
+    mockFetch({ 'GET /api/session': loggedOut })
+    render(<App />)
+
+    expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Password')).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('lang', 'en')
+  })
+
+  test('a saved choice wins over a Russian browser', async () => {
+    window.localStorage.setItem(LOCALE_KEY, 'en')
+    goTo('/')
+    mockFetch({ 'GET /api/session': loggedIn, 'GET /api/projects': ok([]) })
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
+  })
+
+  test('choosing English in settings applies at once and is saved, system removes it', async () => {
+    goTo('/settings')
+    mockFetch(settingsRoutes)
+    const user = userEvent.setup()
+    render(<App />)
+
+    const created = new Date('2026-10-15T09:00:00Z')
+    const group = await screen.findByRole('group', { name: 'Язык' })
+    expect(within(group).getByRole('radio', { name: 'Системный' })).toBeChecked()
+    expect(await screen.findByText(created.toLocaleString('ru-RU'))).toBeInTheDocument()
+
+    await user.click(within(group).getByRole('radio', { name: 'English' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
+    expect(screen.getByText(created.toLocaleString('en-US'))).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('lang', 'en')
+    expect(window.localStorage.getItem(LOCALE_KEY)).toBe('en')
+
+    await user.click(within(screen.getByRole('group', { name: 'Language' })).getByRole('radio', { name: 'System' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Настройки' })).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('lang', 'ru')
+    expect(window.localStorage.getItem(LOCALE_KEY)).toBeNull()
+  })
+
+  test('the login page keeps the chosen language after logout', async () => {
+    goTo('/settings')
+    mockFetch({ ...settingsRoutes, 'POST /api/logout': ok({ authenticated: false }) })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(within(await screen.findByRole('group', { name: 'Язык' })).getByRole('radio', { name: 'English' }))
+    await user.click(screen.getByRole('button', { name: 'Log out' }))
+
+    expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+  })
+
+  test('a server error text is shown as is', async () => {
+    goTo('/login')
+    mockFetch({
+      'GET /api/session': loggedOut,
+      'POST /api/login': fail(401, 'invalid name or password'),
+    })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.type(await screen.findByLabelText('Имя'), 'eugene')
+    await user.type(screen.getByLabelText('Пароль'), 'wrong')
+    await user.click(screen.getByRole('button', { name: 'Войти' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^invalid name or password$/)
   })
 })
