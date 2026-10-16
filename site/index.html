@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>metagit - self-hosted git remote that mirrors your repos</title>
+  <meta name="description" content="Self-hosted git remote that mirrors your repos to several hostings and archives overwritten refs.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/martian-mono-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/golos-text-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="./">metagit</a>
+      <nav aria-label="Main">
+        <a href="#how-it-works">How it works</a>
+        <a href="#quick-start">Quick start</a>
+        <a href="https://github.com/ekalinin/metagit">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-text">
+        <h1 id="title">metagit</h1>
+        <p class="lede">Self-hosted git remote that mirrors your repos to several hostings and archives overwritten refs.</p>
+        <p>To a developer it looks like an ordinary git remote. metagit keeps a full copy of the repository and sends branches and tags to several git hostings: GitHub, Bitbucket, Codeberg and any other with git access.</p>
+        <p class="actions">
+          <a class="button primary" href="https://github.com/ekalinin/metagit">View on GitHub</a>
+          <a class="button" href="#quick-start">Quick start</a>
+        </p>
+      </div>
+
+      <div class="lines">
+        <p class="lines-source"><span class="prompt" aria-hidden="true">$</span>git push metagit main</p>
+        <ul aria-label="Delivery to hostings after the push">
+          <li class="delivered">
+            <span class="lamp lamp-ok" aria-hidden="true"></span>
+            <span class="target">github</span>
+            <span class="state">delivered</span>
+          </li>
+          <li class="queued">
+            <span class="lamp lamp-wait" aria-hidden="true"></span>
+            <span class="target">codeberg</span>
+            <span class="state">queued</span>
+          </li>
+          <li class="failed">
+            <span class="line-break" aria-hidden="true"></span>
+            <span class="lamp lamp-err" aria-hidden="true"></span>
+            <span class="target">bitbucket</span>
+            <span class="state">error, retry later</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel" id="why" aria-labelledby="why-title">
+      <h2 id="why-title">Why</h2>
+      <p>If a project lives on one hosting, you can lose it: the account gets blocked, the hosting shuts down, a mistaken force-push wipes out the history. metagit keeps copies in several places and does not lose previous states of branches.</p>
+    </section>
+
+    <section class="panel" id="how-it-works" aria-labelledby="how-title">
+      <h2 id="how-title">How it works</h2>
+      <dl class="facts">
+        <dt>metagit is the source of truth</dt>
+        <dd>
+          <p>Sync is one-way: changes arrive only through a push to metagit, the hostings get a copy.</p>
+        </dd>
+
+        <dt>Delivery is asynchronous</dt>
+        <dd>
+          <p>A push succeeds as soon as metagit has saved the changes. Then metagit waits a few seconds for the delivery results and prints them in the push output:</p>
+          <pre><code>remote: metagit: github: delivered
+remote: metagit: codeberg: queued
+remote: metagit: bitbucket: error: fatal: Authentication failed ... (retry later)</code></pre>
+          <p>A failed delivery is retried automatically with a growing interval, from 15 seconds to 30 minutes.</p>
+        </dd>
+
+        <dt>Only branches and tags are sent</dt>
+        <dd>
+          <p>Branches and tags on a hosting that metagit did not send there, for example branches for pull requests, are left alone.</p>
+        </dd>
+
+        <dt>Nothing is lost</dt>
+        <dd>
+          <p>Before a force-push, a branch deletion or a tag move, the previous value is saved in <code>refs/metagit/archive/push/...</code>. For protected branches and tags such pushes are rejected.</p>
+        </dd>
+
+        <dt>Changes made on a hosting</dt>
+        <dd>
+          <p>If a branch on a hosting was changed bypassing metagit (for example, a merge in the hosting's web interface), metagit saves the hosting's state in <code>refs/metagit/archive/targets/&lt;id&gt;/...</code>, overwrites the branch with its own value using <code class="nowrap">--force-with-lease</code> and records an event in the project log.</p>
+        </dd>
+
+        <dt>Notifications</dt>
+        <dd>
+          <p>The status of every target and the event log are in the web console.</p>
+        </dd>
+      </dl>
+    </section>
+
+    <section class="panel" id="web-console" aria-labelledby="console-title">
+      <h2 id="console-title">Web console</h2>
+
+      <figure class="shot" style="--frame: 4 / 3">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="img/dark-1280-05-project.png">
+          <img src="img/light-1280-05-project.png" width="1280" height="1906" loading="lazy" alt="Project page of the web console: clone addresses at the top, a line runs from them to four targets. codeberg is disabled, github has an error with its text and the next retry time, gitlab is pending, hosting-b is synced.">
+        </picture>
+        <figcaption>A project and its targets in every state. Full size: <a href="img/light-1280-05-project.png">light theme</a>, <a href="img/dark-1280-05-project.png">dark theme</a>.</figcaption>
+      </figure>
+
+      <figure class="shot" style="--frame: 64 / 25">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="img/dark-1280-03-projects.png">
+          <img src="img/light-1280-03-projects.png" width="1280" height="900" loading="lazy" alt="Projects list of the web console: every project with its clone addresses, a lamp for every target and the number of targets in each state.">
+        </picture>
+        <figcaption>The projects list with a lamp for every target. Full size: <a href="img/light-1280-03-projects.png">light theme</a>, <a href="img/dark-1280-03-projects.png">dark theme</a>.</figcaption>
+      </figure>
+
+      <p class="note">The web console is in Russian for now.</p>
+    </section>
+
+    <section class="panel" id="quick-start" aria-labelledby="start-title">
+      <h2 id="start-title">Quick start</h2>
+      <p>You need Linux or macOS with git 2.30 or newer and an OpenSSH client (<code>ssh</code>). To build: Go 1.26 or newer, Node.js 24 or newer.</p>
+
+      <ol class="steps">
+        <li>
+          <h3>Build</h3>
+          <p>You get one binary, <code>bin/metagit</code>, with the web console built in.</p>
+          <pre><code>make build</code></pre>
+        </li>
+        <li>
+          <h3>Create the owner</h3>
+          <p>metagit has exactly one owner, and it is created only by a command on the server. The password is asked in the terminal.</p>
+          <pre><code>./bin/metagit owner create --name dev --data-dir ./data</code></pre>
+        </li>
+        <li>
+          <h3>Start the service</h3>
+          <p>The web console, the API and git over HTTP listen on <code>:8080</code>, git over SSH on <code>:2222</code>.</p>
+          <pre><code>./bin/metagit serve --data-dir ./data</code></pre>
+        </li>
+        <li>
+          <h3>Create a token and a project</h3>
+          <p>Open the web console and sign in. In Settings, create a git access token (it is shown once) and, if you need SSH, add your public key. Then create a project.</p>
+        </li>
+        <li>
+          <h3>Push to metagit</h3>
+          <p>The project page shows its clone addresses.</p>
+          <pre><code># HTTP(S): any login, the password is a metagit token
+git remote add metagit https://git.example.com/foo.git
+# SSH
+git remote add metagit ssh://git@git.example.com:2222/foo.git
+
+git push metagit main</code></pre>
+        </li>
+        <li>
+          <h3>Add targets</h3>
+          <p>A target is a repository on a hosting: a URL and credentials. Create the repository on the hosting beforehand.</p>
+          <p>Use <code>https://...</code> with a login and a token (for example, a GitHub fine-grained personal access token with write access to contents), or <code>ssh://...</code> or <code>git@host:path</code> with a private SSH key without a passphrase (for example, a deploy key with write access).</p>
+        </li>
+      </ol>
+
+      <p>Installing on a server (a system user, the master key, systemd, TLS) and all <code>metagit serve</code> settings are described in <a href="https://github.com/ekalinin/metagit/blob/main/INSTALL.md">INSTALL.md</a>.</p>
+    </section>
+
+    <section class="panel" id="security" aria-labelledby="security-title">
+      <h2 id="security-title">Security</h2>
+      <ul>
+        <li>Run metagit as a separate system user: hosting credentials are passed to child git processes through the environment.</li>
+        <li>Target credentials are stored encrypted (AES-256-GCM) and are not shown in the web console, logs or push output.</li>
+        <li>The owner password is stored as an argon2id hash, sign-in attempts are rate limited.</li>
+        <li>The SSH server accepts only the owner's keys and runs only <code>git-upload-pack</code> and <code>git-receive-pack</code>.</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="not-included" aria-labelledby="not-included-title">
+      <h2 id="not-included-title">Not in this version</h2>
+      <ul>
+        <li>Git LFS, wiki, releases, issues and pull requests.</li>
+        <li>Several users.</li>
+        <li>Two-way sync.</li>
+        <li>Creating repositories on hostings through their API.</li>
+        <li>Sending archived refs to hostings.</li>
+        <li>Notifications outside the web console.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <a class="brand" href="./">metagit</a>
+    <p><a href="https://github.com/ekalinin/metagit">GitHub</a></p>
+    <p><a href="https://github.com/ekalinin/metagit/blob/main/INSTALL.md">INSTALL.md</a></p>
+    <p>Fonts: Golos Text (<a href="fonts/OFL-golos-text.txt">OFL-1.1</a>), Martian Mono (<a href="fonts/OFL-martian-mono.txt">OFL-1.1</a>).</p>
+  </footer>
+</body>
+</html>
