@@ -250,7 +250,7 @@ func TestEndToEnd(t *testing.T) {
 	work := testutil.InitWork(t)
 	c := testutil.Commit(t, work, "c")
 	out := push(work, "main", "main:feature")
-	for _, want := range []string{"hosting1: доставлено", "hosting2: доставлено"} {
+	for _, want := range []string{"hosting1: delivered", "hosting2: delivered"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("push output has no %q:\n%s", want, out)
 		}
@@ -276,7 +276,7 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatalf("archive = %+v", archive)
 	}
 	// Force-push to the protected branch is rejected.
-	if out, err := testutil.GitErr(work, nil, "push", "--force", remote, "rewrite:main"); err == nil || !strings.Contains(out, "защищен") {
+	if out, err := testutil.GitErr(work, nil, "push", "--force", remote, "rewrite:main"); err == nil || !strings.Contains(out, "is protected") {
 		t.Fatalf("protected main: %v\n%s", err, out)
 	}
 
@@ -288,7 +288,7 @@ func TestEndToEnd(t *testing.T) {
 	testutil.Git(t, work, "checkout", "-q", "main")
 	d := testutil.Commit(t, work, "d")
 	out = push(work, "main")
-	if !strings.Contains(out, "hosting1: доставлено; расхождение") || !strings.Contains(out, "hosting2: доставлено") {
+	if !strings.Contains(out, "hosting1: delivered; diverged") || !strings.Contains(out, "hosting2: delivered") {
 		t.Fatalf("push output:\n%s", out)
 	}
 	if h1.ref("refs/heads/main") != d {
@@ -310,7 +310,7 @@ func TestEndToEnd(t *testing.T) {
 	h2.stop()
 	f := testutil.Commit(t, work, "f")
 	out = push(work, "main")
-	if !strings.Contains(out, "hosting1: доставлено") || !strings.Contains(out, "hosting2: ошибка") {
+	if !strings.Contains(out, "hosting1: delivered") || !strings.Contains(out, "hosting2: error") {
 		t.Fatalf("push output with hosting2 down:\n%s", out)
 	}
 	w.waitTarget("hosting2", "error", func(tg target) bool { return tg.State == "error" && tg.LastError != "" })

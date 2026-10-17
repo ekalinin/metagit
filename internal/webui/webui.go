@@ -27,8 +27,8 @@ func Embedded() fs.FS {
 	return sub
 }
 
-const notBuilt = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>metagit</title></head>
-<body><p>Веб-интерфейс не собран. Выполните <code>make build</code>.</p></body></html>`
+const notBuilt = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>metagit</title></head>
+<body><p>The web interface is not built. Run <code>make build</code>.</p></body></html>`
 
 // Handler serves files from site and falls back to index.html for client-side
 // routes. A nil site serves a page that says the interface was not built.

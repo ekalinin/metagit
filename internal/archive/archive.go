@@ -55,10 +55,10 @@ func MatchPattern(pattern, ref string) bool {
 // ValidatePattern checks a protection pattern.
 func ValidatePattern(pattern string) error {
 	if !strings.HasPrefix(pattern, "refs/") || len(pattern) <= len("refs/") || strings.ContainsAny(pattern, " \t\n") {
-		return errors.New("шаблон должен начинаться с refs/, например refs/heads/main или refs/tags/*")
+		return errors.New("pattern must start with refs/, for example refs/heads/main or refs/tags/*")
 	}
 	if strings.HasPrefix(pattern, Namespace) {
-		return errors.New("refs/metagit/ - служебное пространство, его не нужно защищать")
+		return errors.New("refs/metagit/ is a reserved namespace, it does not need protection")
 	}
 	return nil
 }
@@ -68,7 +68,7 @@ func Check(updates []hooks.Update, patterns []string) []string {
 	var msgs []string
 	for _, u := range updates {
 		if strings.HasPrefix(u.Ref, Namespace) {
-			msgs = append(msgs, fmt.Sprintf("metagit: %s: refs/metagit/ - служебное пространство, push в него запрещен", u.Ref))
+			msgs = append(msgs, fmt.Sprintf("metagit: %s: refs/metagit/ is a reserved namespace, pushes to it are not allowed", u.Ref))
 			continue
 		}
 		if !u.Kind.Destructive() {
@@ -76,13 +76,13 @@ func Check(updates []hooks.Update, patterns []string) []string {
 		}
 		for _, p := range patterns {
 			if MatchPattern(p, u.Ref) {
-				msgs = append(msgs, fmt.Sprintf("metagit: %s защищен (шаблон %s): %s запрещен", u.Ref, p, describe(u.Kind)))
+				msgs = append(msgs, fmt.Sprintf("metagit: %s is protected (pattern %s): %s is not allowed", u.Ref, p, describe(u.Kind)))
 				break
 			}
 		}
 	}
 	if len(msgs) > 0 {
-		msgs = append(msgs, "metagit: push отклонен, ни один ref не изменен")
+		msgs = append(msgs, "metagit: push rejected, no refs were changed")
 	}
 	return msgs
 }
@@ -90,11 +90,11 @@ func Check(updates []hooks.Update, patterns []string) []string {
 func describe(k hooks.Kind) string {
 	switch k {
 	case hooks.KindDelete:
-		return "удаление"
+		return "deletion"
 	case hooks.KindTagMove:
-		return "перемещение тега"
+		return "tag move"
 	default:
-		return "push, который не является fast-forward"
+		return "non-fast-forward push"
 	}
 }
 
@@ -212,7 +212,7 @@ func (s *Service) finish(ctx context.Context, project *store.Project, intents []
 				Kind:       store.EventArchivePush,
 				Ref:        in.Ref,
 				ArchiveRef: name,
-				Message:    fmt.Sprintf("%s: прежнее состояние %s сохранено в %s", in.Ref, short(in.OldObject), name),
+				Message:    fmt.Sprintf("%s: previous state %s saved in %s", in.Ref, short(in.OldObject), name),
 			})
 			if err != nil {
 				return err

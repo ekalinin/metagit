@@ -74,7 +74,7 @@ func TestTargetURLWithSecretRejected(t *testing.T) {
 		Name: "gh", URL: "https://user:token@github.com/u/foo.git", AuthKind: store.AuthHTTPS, Secret: &token, Enabled: true,
 	})
 	ve, ok := errors.AsType[*core.ValidationError](err)
-	if !ok || !strings.Contains(ve.Msg, "учетные данные в URL запрещены") {
+	if !ok || !strings.Contains(ve.Msg, "credentials in the URL are not allowed") {
 		t.Fatalf("expected validation error, got %v", err)
 	}
 }
@@ -93,7 +93,7 @@ func TestDisabledTargetIsNotContacted(t *testing.T) {
 	if h.Requests() != 0 {
 		t.Fatalf("disabled target received %d requests", h.Requests())
 	}
-	if strings.Contains(out, "github") || !strings.Contains(out, "включенных target'ов нет") {
+	if strings.Contains(out, "github") || !strings.Contains(out, "no enabled targets") {
 		t.Fatalf("push output:\n%s", out)
 	}
 	if got := e.Target(tg.ID); got.State != store.StatePending {
@@ -225,7 +225,7 @@ func TestDeliveryTouchesOnlyMetagitRefs(t *testing.T) {
 	x := testutil.Commit(t, work, "x")
 	testutil.Git(t, work, "notes", "add", "-m", "note", x)
 	out := e.Push(work, "foo", ":old", "--force", "rewrite:feature", "refs/notes/commits")
-	if !strings.Contains(out, "github: доставлено") {
+	if !strings.Contains(out, "github: delivered") {
 		t.Fatalf("push output:\n%s", out)
 	}
 	if h.Ref(t, "foo", "refs/heads/old") != "" {
@@ -284,7 +284,7 @@ func TestDivergedTargetIsArchivedAndOverwritten(t *testing.T) {
 	if got := testutil.RefOf(t, e.RepoPath("foo"), list[0].ArchiveRef); got != eCommit {
 		t.Fatalf("archive ref points to %q", got)
 	}
-	if !strings.Contains(out, "github: доставлено; расхождение") || !strings.Contains(out, list[0].ArchiveRef) {
+	if !strings.Contains(out, "github: delivered; diverged") || !strings.Contains(out, list[0].ArchiveRef) {
 		t.Fatalf("push output:\n%s", out)
 	}
 	var diverged []store.Event
@@ -457,7 +457,7 @@ func TestPushOutputShowsDeliveryStatus(t *testing.T) {
 	out := e.Push(work, "foo", "main")
 	elapsed := time.Since(start)
 
-	for _, want := range []string{"metagit: fast: доставлено", "metagit: slow: в очереди", "metagit: broken: ошибка:"} {
+	for _, want := range []string{"metagit: fast: delivered", "metagit: slow: queued", "metagit: broken: error:"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("push output has no %q:\n%s", want, out)
 		}
@@ -488,7 +488,7 @@ func TestSecretsAreMaskedInErrors(t *testing.T) {
 	work := testutil.InitWork(t)
 	testutil.Commit(t, work, "a")
 	out := e.Push(work, "foo", "main")
-	if strings.Contains(out, hostToken) || !strings.Contains(out, "github: ошибка:") {
+	if strings.Contains(out, hostToken) || !strings.Contains(out, "github: error:") {
 		t.Fatalf("push output:\n%s", out)
 	}
 	var found bool
