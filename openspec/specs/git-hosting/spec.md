@@ -34,7 +34,7 @@ metagit MUST поддерживать clone, fetch и push по git smart HTTP. 
 
 #### Scenario: Несуществующий проект
 - **WHEN** авторизованный git-клиент обращается к проекту, которого нет
-- **THEN** metagit отвечает ошибкой "репозиторий не найден"
+- **THEN** metagit отвечает ошибкой `repository not found`
 
 ### Requirement: Доступ к git по SSH
 metagit MUST поддерживать clone, fetch и push по SSH на отдельном порту. Аутентификация MUST проходить по SSH-ключам, которые владелец зарегистрировал в metagit. metagit MUST выполнять только git-команды получения и отправки данных и MUST отклонять любые другие запросы, включая интерактивную оболочку.
