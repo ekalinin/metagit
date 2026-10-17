@@ -28,7 +28,7 @@ export function Field({ label, hint, children }: FieldProps) {
 export function formatTime(value?: string): string {
   if (!value) return ''
   const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleString(currentLocale() === 'ru' ? 'ru-RU' : 'en-US')
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString(currentLocale() === 'ru' ? 'ru-RU' : 'en-GB')
 }
 
 export function stateLabel(state: TargetState): string {

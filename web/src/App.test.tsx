@@ -233,7 +233,7 @@ describe('interface language', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
-    expect(screen.getByText(created.toLocaleString('en-US'))).toBeInTheDocument()
+    expect(screen.getByText(created.toLocaleString('en-GB'))).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('lang', 'en')
     expect(window.localStorage.getItem(LOCALE_KEY)).toBe('en')
 
