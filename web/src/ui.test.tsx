@@ -22,5 +22,5 @@ test('formatTime follows the interface language', () => {
   expect(formatTime(value)).toBe(new Date(value).toLocaleString('ru-RU'))
 
   window.localStorage.setItem(LOCALE_KEY, 'en')
-  expect(formatTime(value)).toBe(new Date(value).toLocaleString('en-US'))
+  expect(formatTime(value)).toBe(new Date(value).toLocaleString('en-GB'))
 })
