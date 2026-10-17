@@ -236,7 +236,8 @@ a.brand:hover {
   margin: 0 auto 0.5rem;
 }
 
-.theme-switch {
+.theme-switch,
+.locale-switch {
   display: inline-flex;
   margin: 0;
   padding: 0;
@@ -244,12 +245,14 @@ a.brand:hover {
   border-radius: 4px;
 }
 
-.theme-switch label {
+.theme-switch label,
+.locale-switch label {
   position: relative;
   display: block;
 }
 
-.theme-switch input {
+.theme-switch input,
+.locale-switch input {
   position: absolute;
   opacity: 0;
   inset: 0;
@@ -257,27 +260,32 @@ a.brand:hover {
   cursor: pointer;
 }
 
-.theme-switch span {
+.theme-switch span,
+.locale-switch span {
   display: block;
   padding: 0.2rem 0.6rem;
   font-size: 0.8125rem;
   color: var(--graphite);
 }
 
-.theme-switch label + label span {
+.theme-switch label + label span,
+.locale-switch label + label span {
   border-left: 1px solid var(--hairline);
 }
 
-.theme-switch input:checked + span {
+.theme-switch input:checked + span,
+.locale-switch input:checked + span {
   background: var(--ink);
   color: var(--surface);
 }
 
-.theme-switch input:hover:not(:checked) + span {
+.theme-switch input:hover:not(:checked) + span,
+.locale-switch input:hover:not(:checked) + span {
   color: var(--ink);
 }
 
-.theme-switch input:focus-visible + span {
+.theme-switch input:focus-visible + span,
+.locale-switch input:focus-visible + span {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
@@ -976,7 +984,8 @@ button.small {
     gap: 0.75rem;
   }
 
-  .theme-switch span {
+  .theme-switch span,
+  .locale-switch span {
     padding: 0.2rem 0.45rem;
   }
 

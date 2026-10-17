@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, errorText, type CreatedToken, type SSHKey, type Token } from '../api'
 import { fileToBase64, saveFile } from '../files'
+import { setLocaleMode, storedLocaleMode, useT, type LocaleMode } from '../locale'
 import { Link, projectPath } from '../router'
 import { ErrorMessage, Field, formatTime, Notice } from '../ui'
 
 export function SettingsPage() {
+  const text = useT()
   return (
     <>
-      <h1>Настройки</h1>
+      <h1>{text.settings.title}</h1>
+      <LanguageSection />
       <TokensSection />
       <SSHKeysSection />
       <ExportSection />
@@ -16,7 +19,40 @@ export function SettingsPage() {
   )
 }
 
+const localeModes: LocaleMode[] = ['system', 'ru', 'en']
+
+function LanguageSection() {
+  const text = useT()
+  const [mode, setMode] = useState(storedLocaleMode)
+
+  return (
+    <section className="card">
+      <h2>{text.settings.language}</h2>
+      <fieldset className="locale-switch">
+        <legend className="visually-hidden">{text.settings.language}</legend>
+        {localeModes.map((m) => (
+          <label key={m}>
+            <input
+              type="radio"
+              name="locale"
+              value={m}
+              checked={mode === m}
+              onChange={() => {
+                setLocaleMode(m)
+                setMode(m)
+              }}
+            />
+            {/* Language names are written in their own language. */}
+            <span lang={m === 'system' ? undefined : m}>{text.settings.languageModes[m]}</span>
+          </label>
+        ))}
+      </fieldset>
+    </section>
+  )
+}
+
 function TokensSection() {
+  const text = useT()
   const [tokens, setTokens] = useState<Token[] | null>(null)
   const [name, setName] = useState('')
   // The token value lives only in this state: it is gone after dismissal or navigation.
@@ -52,7 +88,7 @@ function TokensSection() {
   }
 
   async function revoke(token: Token) {
-    if (!window.confirm(`Отозвать токен ${token.name}? Git-запросы с ним перестанут работать.`)) return
+    if (!window.confirm(text.settings.confirmRevoke(token.name))) return
     setError('')
     try {
       await api.deleteToken(token.id)
@@ -64,32 +100,29 @@ function TokensSection() {
 
   return (
     <section className="card">
-      <h2>Токены доступа для git</h2>
-      <p className="muted">Токены для работы с репозиториями metagit по HTTP(S).</p>
+      <h2>{text.settings.tokens}</h2>
+      <p className="muted">{text.settings.tokensHint}</p>
       {created && (
         <div className="secret-once" role="status">
-          <p>
-            Токен <strong>{created.token.name}</strong> создан. Скопируйте значение сейчас: оно больше не будет
-            показано.
-          </p>
+          <p>{text.settings.tokenCreated(created.token.name)}</p>
           <code className="block">{created.value}</code>
           <button type="button" className="secondary small" onClick={() => setCreated(null)}>
-            Скрыть
+            {text.settings.hide}
           </button>
         </div>
       )}
       {tokens !== null &&
         (tokens.length === 0 ? (
-          <p className="muted">Токенов нет.</p>
+          <p className="muted">{text.settings.noTokens}</p>
         ) : (
           <div className="table-wrap">
-            <table aria-label="Токены">
+            <table aria-label={text.settings.tokensTable}>
               <thead>
                 <tr>
-                  <th>Имя</th>
-                  <th>Создан</th>
-                  <th>Последнее использование</th>
-                  <th aria-label="Действия" />
+                  <th>{text.common.name}</th>
+                  <th>{text.settings.created}</th>
+                  <th>{text.settings.lastUsed}</th>
+                  <th aria-label={text.common.actions} />
                 </tr>
               </thead>
               <tbody>
@@ -101,17 +134,17 @@ function TokensSection() {
                       {t.last_used_at ? (
                         <span className="mono">{formatTime(t.last_used_at)}</span>
                       ) : (
-                        <span className="muted">не использовался</span>
+                        <span className="muted">{text.settings.neverUsed}</span>
                       )}
                     </td>
                     <td className="actions">
                       <button
                         type="button"
                         className="danger small"
-                        aria-label={`Отозвать ${t.name}`}
+                        aria-label={text.settings.revokeNamed(t.name)}
                         onClick={() => void revoke(t)}
                       >
-                        Отозвать
+                        {text.settings.revoke}
                       </button>
                     </td>
                   </tr>
@@ -127,11 +160,11 @@ function TokensSection() {
           void create()
         }}
       >
-        <Field label="Имя токена">
+        <Field label={text.settings.tokenName}>
           <input value={name} required placeholder="laptop" onChange={(e) => setName(e.target.value)} />
         </Field>
         <button type="submit" disabled={busy || name.trim() === ''}>
-          Создать токен
+          {text.settings.createToken}
         </button>
       </form>
       <ErrorMessage text={error} />
@@ -140,6 +173,7 @@ function TokensSection() {
 }
 
 function SSHKeysSection() {
+  const text = useT()
   const [keys, setKeys] = useState<SSHKey[] | null>(null)
   const [name, setName] = useState('')
   const [publicKey, setPublicKey] = useState('')
@@ -174,7 +208,7 @@ function SSHKeysSection() {
   }
 
   async function remove(key: SSHKey) {
-    if (!window.confirm(`Удалить SSH-ключ ${key.name || key.fingerprint}?`)) return
+    if (!window.confirm(text.settings.confirmDeleteKey(key.name || key.fingerprint))) return
     setError('')
     try {
       await api.deleteSSHKey(key.id)
@@ -186,26 +220,26 @@ function SSHKeysSection() {
 
   return (
     <section className="card">
-      <h2>SSH-ключи</h2>
-      <p className="muted">Публичные ключи для работы с репозиториями metagit по SSH.</p>
+      <h2>{text.settings.sshKeys}</h2>
+      <p className="muted">{text.settings.sshKeysHint}</p>
       {keys !== null &&
         (keys.length === 0 ? (
-          <p className="muted">SSH-ключей нет.</p>
+          <p className="muted">{text.settings.noKeys}</p>
         ) : (
           <div className="table-wrap">
-            <table aria-label="SSH-ключи">
+            <table aria-label={text.settings.sshKeys}>
               <thead>
                 <tr>
-                  <th>Имя</th>
-                  <th>Отпечаток</th>
-                  <th>Добавлен</th>
-                  <th aria-label="Действия" />
+                  <th>{text.common.name}</th>
+                  <th>{text.settings.fingerprint}</th>
+                  <th>{text.settings.added}</th>
+                  <th aria-label={text.common.actions} />
                 </tr>
               </thead>
               <tbody>
                 {keys.map((k) => (
                   <tr key={k.id}>
-                    <td className="strong">{k.name || <span className="muted">без имени</span>}</td>
+                    <td className="strong">{k.name || <span className="muted">{text.settings.unnamed}</span>}</td>
                     <td>
                       <code>{k.fingerprint}</code>
                     </td>
@@ -214,10 +248,10 @@ function SSHKeysSection() {
                       <button
                         type="button"
                         className="danger small"
-                        aria-label={`Удалить ключ ${k.name || k.fingerprint}`}
+                        aria-label={text.settings.deleteKey(k.name || k.fingerprint)}
                         onClick={() => void remove(k)}
                       >
-                        Удалить
+                        {text.common.delete}
                       </button>
                     </td>
                   </tr>
@@ -232,10 +266,10 @@ function SSHKeysSection() {
           void add()
         }}
       >
-        <Field label="Имя (необязательно)">
+        <Field label={text.settings.keyName}>
           <input value={name} placeholder="laptop" onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Публичный ключ">
+        <Field label={text.settings.publicKey}>
           <textarea
             className="mono"
             value={publicKey}
@@ -247,7 +281,7 @@ function SSHKeysSection() {
           />
         </Field>
         <button type="submit" disabled={busy || publicKey.trim() === ''}>
-          Добавить ключ
+          {text.settings.addKey}
         </button>
       </form>
       <ErrorMessage text={error} />
@@ -258,6 +292,7 @@ function SSHKeysSection() {
 const MIN_PASSPHRASE = 8
 
 function ExportSection() {
+  const text = useT()
   const [passphrase, setPassphrase] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -270,7 +305,7 @@ function ExportSection() {
     try {
       const file = await api.exportSettings(passphrase)
       saveFile(file.blob, file.filename)
-      setNotice(`Файл ${file.filename} сохранен.`)
+      setNotice(text.settings.fileSaved(file.filename))
     } catch (err) {
       setError(errorText(err))
     } finally {
@@ -280,13 +315,9 @@ function ExportSection() {
 
   return (
     <section className="card">
-      <h2>Экспорт настроек</h2>
-      <p className="muted">
-        Файл содержит проекты, их защищенные refs и target'ы. Git-данные (код и архив) в файл не входят.
-      </p>
-      <p className="message message-warn">
-        В файле есть учетные данные для хостингов. Он шифруется паролем: храните файл и пароль в надежном месте.
-      </p>
+      <h2>{text.settings.export}</h2>
+      <p className="muted">{text.settings.exportHint}</p>
+      <p className="message message-warn">{text.settings.exportWarning}</p>
       <form
         className="inline-form"
         onSubmit={(e) => {
@@ -294,7 +325,7 @@ function ExportSection() {
           void run()
         }}
       >
-        <Field label="Пароль для файла" hint={`Не короче ${MIN_PASSPHRASE} символов.`}>
+        <Field label={text.settings.exportPassword} hint={text.settings.passwordHint(MIN_PASSPHRASE)}>
           <input
             type="password"
             value={passphrase}
@@ -305,7 +336,7 @@ function ExportSection() {
           />
         </Field>
         <button type="submit" disabled={busy || passphrase.length < MIN_PASSPHRASE}>
-          Скачать файл экспорта
+          {text.settings.download}
         </button>
       </form>
       <ErrorMessage text={error} />
@@ -315,6 +346,7 @@ function ExportSection() {
 }
 
 function ImportSection() {
+  const text = useT()
   const [file, setFile] = useState<File | null>(null)
   const [passphrase, setPassphrase] = useState('')
   const [created, setCreated] = useState<string[] | null>(null)
@@ -339,11 +371,8 @@ function ImportSection() {
 
   return (
     <section className="card">
-      <h2>Импорт настроек</h2>
-      <p className="muted">
-        Импорт выполняется целиком или не выполняется вовсе: при неверном пароле, поврежденном файле или конфликте
-        имен проектов metagit ничего не меняет.
-      </p>
+      <h2>{text.settings.import}</h2>
+      <p className="muted">{text.settings.importHint}</p>
       <form
         className="inline-form"
         onSubmit={(e) => {
@@ -351,10 +380,10 @@ function ImportSection() {
           void run()
         }}
       >
-        <Field label="Файл экспорта">
+        <Field label={text.settings.importFile}>
           <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         </Field>
-        <Field label="Пароль файла">
+        <Field label={text.settings.importPassword}>
           <input
             type="password"
             value={passphrase}
@@ -364,17 +393,17 @@ function ImportSection() {
           />
         </Field>
         <button type="submit" disabled={busy || file === null || passphrase === ''}>
-          Импортировать
+          {text.settings.importSubmit}
         </button>
       </form>
       <ErrorMessage text={error} />
       {created && (
         <div className="message message-ok" role="status">
           {created.length === 0 ? (
-            <p>Импорт завершен, новых проектов нет.</p>
+            <p>{text.settings.importNone}</p>
           ) : (
             <>
-              <p>Созданы проекты:</p>
+              <p>{text.settings.importCreated}</p>
               <ul>
                 {created.map((name) => (
                   <li key={name}>
@@ -384,9 +413,7 @@ function ImportSection() {
               </ul>
             </>
           )}
-          <p>
-            Репозитории проектов пустые. metagit ничего не меняет на хостингах, пока вы не отправите push в проект.
-          </p>
+          <p>{text.settings.importEmptyRepos}</p>
         </div>
       )}
     </section>

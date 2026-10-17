@@ -129,6 +129,12 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
 | Тема на странице входа | `App.test.tsx`: "the login page keeps the chosen mode after logout" |
 | Сеть без доступа в интернет | проверка в браузере (см. ниже) |
 | Состояние без цвета | `ui.test.tsx`: "a state is written as the only text of its badge", "a lamp is hidden from assistive technologies"; `pages/ProjectPage.test.tsx`: "every target row starts with a delivery line drawn for its state" |
+| Браузер на русском | `App.test.tsx`: "a Russian browser gets the Russian interface and lang"; `locale.test.ts`: "the first supported browser language wins, otherwise English"; `lang` до загрузки бандла - проверка в браузере (см. ниже) |
+| Неподдерживаемый язык браузера | `App.test.tsx`: "an unsupported browser language gets English"; `locale.test.ts`: "the first supported browser language wins, otherwise English" |
+| Ручной выбор сохраняется (язык) | `App.test.tsx`: "a saved choice wins over a Russian browser"; `locale.test.ts`: "a saved language is read back, anything else means system", "a chosen mode is saved, system removes it" |
+| Смена языка без перезагрузки | `App.test.tsx`: "choosing English in settings applies at once and is saved, system removes it"; `ui.test.tsx`: "formatTime follows the interface language" |
+| Язык на странице входа | `App.test.tsx`: "the login page keeps the chosen language after logout" |
+| Текст ошибки с сервера | `App.test.tsx`: "a server error text is shown as is" |
 
 ### project-landing
 
@@ -172,6 +178,11 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
   - в режиме "Системная" тема меняется вслед за ОС без перезагрузки;
   - бегущий пунктир у target'а в состоянии "ожидает" останавливается при `prefers-reduced-motion: reduce`;
   - все запросы страниц идут к адресу metagit, шрифты Golos Text и Martian Mono загружены для латиницы и кириллицы.
+- **Проверка языка интерфейса в браузере.** Google Chrome через `playwright-core` на одном экземпляре `metagit serve` с проектом и target'ом. Проверялось:
+  - inline-скрипт в `index.html` выставляет `lang` до загрузки бандла (бандл заблокирован): сохраненный `ru` в браузере `en-US` - `ru`, браузер `ru-RU` - `ru`, браузер `de-DE` - `en`, сохраненный `en` в браузере `ru-RU` - `en`;
+  - браузер `ru-RU` открывает интерфейс на русском, `en-US` - на английском;
+  - выбор "English" в настройках сразу, без перезагрузки, переводит шапку и страницу и действует после перезагрузки на страницах настроек, проектов и проекта, а также на странице входа после выхода;
+  - на ширине 1280 и 375 px в обеих темах у страниц настроек, проектов и проекта нет горизонтальной прокрутки, английские тексты не переполняют кнопки и шапку.
 - **Проверка лендинга в браузере.** Google Chrome через `playwright-core`. `site/` раздавался командой `python3 -m http.server -d site` и вторым сервером из каталога с символической ссылкой `metagit -> site`, чтобы страница открывалась по адресу `/metagit/`, как на GitHub Pages. Проверялось:
   - в корне и в `/metagit/` все запросы идут к адресу локального сервера и успешны, загружены оба шрифта и оба скриншота, якорные ссылки работают, в консоли нет ошибок;
   - в окнах 1280×800 и 375×667 без прокрутки видны название, описание и ссылка на репозиторий;

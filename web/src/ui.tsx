@@ -1,5 +1,6 @@
 import { cloneElement, useId, type ReactElement, type ReactNode } from 'react'
 import type { AuthKind, TargetState } from './api'
+import { currentLocale, messages } from './locale'
 
 interface FieldProps {
   label: string
@@ -27,17 +28,11 @@ export function Field({ label, hint, children }: FieldProps) {
 export function formatTime(value?: string): string {
   if (!value) return ''
   const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleString('ru-RU')
-}
-
-const stateLabels: Record<TargetState, string> = {
-  synced: 'синхронизирован',
-  pending: 'ожидает',
-  error: 'ошибка',
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString(currentLocale() === 'ru' ? 'ru-RU' : 'en-US')
 }
 
 export function stateLabel(state: TargetState): string {
-  return stateLabels[state] ?? state
+  return messages().labels.states[state] ?? state
 }
 
 // The signal color of a lamp: ok, wait and err are states, neutral is an event
@@ -64,14 +59,8 @@ export function StateBadge({ state }: { state: TargetState }) {
   return <span className={`state state-${state}`}>{stateLabel(state)}</span>
 }
 
-const authKindLabels: Record<AuthKind, string> = {
-  none: 'без учетных данных',
-  https: 'HTTPS: логин и токен',
-  ssh: 'SSH: приватный ключ',
-}
-
 export function authKindLabel(kind: AuthKind): string {
-  return authKindLabels[kind] ?? kind
+  return messages().labels.authKinds[kind] ?? kind
 }
 
 export function ErrorMessage({ text }: { text: string }) {

@@ -1,3 +1,4 @@
+import { messages } from './locale'
 import { loginPath, navigate } from './router'
 
 export type AuthKind = 'none' | 'https' | 'ssh'
@@ -123,7 +124,7 @@ export class ApiError extends Error {
 
 export function errorText(err: unknown): string {
   if (err instanceof Error && err.message) return err.message
-  return 'Неизвестная ошибка'
+  return messages().api.unknownError
 }
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -161,7 +162,7 @@ async function errorMessage(resp: Response): Promise<string> {
   } catch {
     // Not a JSON body.
   }
-  return `Ошибка сервера (${resp.status})`
+  return messages().api.serverError(resp.status)
 }
 
 async function send(method: Method, path: string, options: RequestOptions = {}): Promise<Response> {
@@ -175,7 +176,7 @@ async function send(method: Method, path: string, options: RequestOptions = {}):
   try {
     resp = await fetch(path, init)
   } catch {
-    throw new ApiError(0, 'Сервер недоступен, проверьте соединение')
+    throw new ApiError(0, messages().api.unreachable)
   }
   if (resp.ok) return resp
   const message = await errorMessage(resp)

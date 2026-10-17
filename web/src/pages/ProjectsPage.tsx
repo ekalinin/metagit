@@ -1,9 +1,11 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { api, errorText, type ProjectSummary, type Target, type TargetState } from '../api'
+import { useT } from '../locale'
 import { Link, projectPath } from '../router'
 import { ErrorMessage, Field, formatTime, Lamp, stateLabel, stateTone } from '../ui'
 
 export function ProjectsPage() {
+  const text = useT()
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null)
   const [error, setError] = useState('')
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -23,21 +25,21 @@ export function ProjectsPage() {
 
   return (
     <>
-      <h1>Проекты</h1>
+      <h1>{text.projects.title}</h1>
       <ErrorMessage text={error} />
       {projects === null ? (
-        !error && <p className="muted">Загрузка...</p>
+        !error && <p className="muted">{text.common.loading}</p>
       ) : projects.length === 0 ? (
-        <p className="muted">Проектов пока нет. Создайте первый проект ниже.</p>
+        <p className="muted">{text.projects.empty}</p>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Проект</th>
-                <th>Адреса для клонирования</th>
-                <th>Target'ы</th>
-                <th aria-label="Действия" />
+                <th>{text.projects.project}</th>
+                <th>{text.projects.cloneAddresses}</th>
+                <th>{text.projects.targets}</th>
+                <th aria-label={text.common.actions} />
               </tr>
             </thead>
             <tbody>
@@ -48,7 +50,7 @@ export function ProjectsPage() {
                       <Link to={projectPath(p.name)} className="strong">
                         {p.name}
                       </Link>
-                      <div className="muted small">создан {formatTime(p.created_at)}</div>
+                      <div className="muted small">{text.projects.created(formatTime(p.created_at))}</div>
                     </td>
                     <td>
                       <div className="clone-line">
@@ -65,10 +67,10 @@ export function ProjectsPage() {
                       <button
                         type="button"
                         className="danger small"
-                        aria-label={`Удалить ${p.name}`}
+                        aria-label={text.common.deleteNamed(p.name)}
                         onClick={() => setDeleting(deleting === p.name ? null : p.name)}
                       >
-                        Удалить
+                        {text.common.delete}
                       </button>
                     </td>
                   </tr>
@@ -100,7 +102,8 @@ export function ProjectsPage() {
 const summaryOrder: TargetState[] = ['error', 'pending', 'synced']
 
 function TargetsSummary({ targets }: { targets: Target[] }) {
-  if (targets.length === 0) return <span className="muted">нет target'ов</span>
+  const text = useT()
+  if (targets.length === 0) return <span className="muted">{text.projects.noTargets}</span>
   const disabled = targets.filter((t) => !t.enabled).length
   return (
     <div className="summary">
@@ -109,7 +112,7 @@ function TargetsSummary({ targets }: { targets: Target[] }) {
           <Lamp
             key={t.id}
             tone={t.enabled ? stateTone(t.state) : 'off'}
-            title={`${t.name}: ${stateLabel(t.state)}${t.enabled ? '' : ', выключен'}`}
+            title={`${t.name}: ${stateLabel(t.state)}${t.enabled ? '' : text.projects.disabledSuffix}`}
           />
         ))}
       </span>
@@ -122,12 +125,17 @@ function TargetsSummary({ targets }: { targets: Target[] }) {
           </span>
         )
       })}
-      {disabled > 0 && <span className="count">выключено: {disabled}</span>}
+      {disabled > 0 && (
+        <span className="count">
+          {text.projects.disabledCount}: {disabled}
+        </span>
+      )}
     </div>
   )
 }
 
 function CreateProject({ onCreated }: { onCreated: () => void }) {
+  const text = useT()
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -148,7 +156,7 @@ function CreateProject({ onCreated }: { onCreated: () => void }) {
 
   return (
     <section className="card">
-      <h2>Новый проект</h2>
+      <h2>{text.projects.newProject}</h2>
       <form
         className="inline-form"
         onSubmit={(e) => {
@@ -156,11 +164,11 @@ function CreateProject({ onCreated }: { onCreated: () => void }) {
           void submit()
         }}
       >
-        <Field label="Имя проекта" hint="Строчные латинские буквы, цифры, точка, подчеркивание и дефис.">
+        <Field label={text.projects.projectName} hint={text.projects.projectNameHint}>
           <input value={name} required onChange={(e) => setName(e.target.value)} placeholder="my-project" />
         </Field>
         <button type="submit" disabled={busy || name.trim() === ''}>
-          Создать проект
+          {text.projects.create}
         </button>
       </form>
       <ErrorMessage text={error} />
@@ -175,6 +183,7 @@ interface DeleteProjectProps {
 }
 
 function DeleteProject({ name, onCancel, onDeleted }: DeleteProjectProps) {
+  const text = useT()
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -199,19 +208,16 @@ function DeleteProject({ name, onCancel, onDeleted }: DeleteProjectProps) {
         if (confirm === name) void submit()
       }}
     >
-      <p>
-        Будут удалены репозиторий проекта <strong>{name}</strong> и его архив в metagit. Репозитории на хостингах
-        (target'ах) не затрагиваются.
-      </p>
-      <Field label="Введите имя проекта для подтверждения">
+      <p>{text.projects.deleteWarning(name)}</p>
+      <Field label={text.projects.confirmName}>
         <input value={confirm} autoComplete="off" autoFocus onChange={(e) => setConfirm(e.target.value)} />
       </Field>
       <div className="buttons">
         <button type="submit" className="danger" disabled={busy || confirm !== name}>
-          Удалить проект
+          {text.projects.deleteProject}
         </button>
         <button type="button" className="secondary" onClick={onCancel}>
-          Отмена
+          {text.common.cancel}
         </button>
       </div>
       <ErrorMessage text={error} />

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, errorText, type ProtectedRef } from '../api'
+import { useT } from '../locale'
 import { ErrorMessage, Field } from '../ui'
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function ProtectedRefs({ project, refs, reload }: Props) {
+  const text = useT()
   const [pattern, setPattern] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -34,14 +36,12 @@ export function ProtectedRefs({ project, refs, reload }: Props) {
 
   return (
     <section className="card">
-      <h2>Защищенные refs</h2>
-      <p className="muted">
-        Для refs, подходящих под шаблон, metagit отклоняет force-push, удаление и перенос тегов.
-      </p>
+      <h2>{text.protectedRefs.title}</h2>
+      <p className="muted">{text.protectedRefs.hint}</p>
       {refs.length === 0 ? (
-        <p className="muted">Защищенных refs нет.</p>
+        <p className="muted">{text.protectedRefs.empty}</p>
       ) : (
-        <ul className="pattern-list" aria-label="Шаблоны защищенных refs">
+        <ul className="pattern-list" aria-label={text.protectedRefs.listLabel}>
           {refs.map((r) => (
             <li key={r.id}>
               <code>{r.pattern}</code>
@@ -49,10 +49,10 @@ export function ProtectedRefs({ project, refs, reload }: Props) {
                 type="button"
                 className="danger small"
                 disabled={busy}
-                aria-label={`Удалить шаблон ${r.pattern}`}
+                aria-label={text.protectedRefs.deletePattern(r.pattern)}
                 onClick={() => void run(() => api.deleteProtected(project, r.id))}
               >
-                Удалить
+                {text.common.delete}
               </button>
             </li>
           ))}
@@ -65,7 +65,7 @@ export function ProtectedRefs({ project, refs, reload }: Props) {
           void add()
         }}
       >
-        <Field label="Шаблон" hint="Например: refs/heads/main или refs/tags/*">
+        <Field label={text.protectedRefs.pattern} hint={text.protectedRefs.patternHint}>
           <input
             className="mono"
             value={pattern}
@@ -76,7 +76,7 @@ export function ProtectedRefs({ project, refs, reload }: Props) {
           />
         </Field>
         <button type="submit" disabled={busy || pattern.trim() === ''}>
-          Добавить шаблон
+          {text.protectedRefs.add}
         </button>
       </form>
       <ErrorMessage text={error} />
