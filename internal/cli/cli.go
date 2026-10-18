@@ -31,6 +31,7 @@ Commands:
   owner create   create the owner or change the owner's password
   hook           called by git hooks of metagit repositories
   askpass        gives hosting credentials to git (internal)
+  version        show the metagit version
   help           show this help
 
 Run "metagit <command> --help" for command flags.
@@ -45,6 +46,9 @@ func Run(ctx context.Context, args []string, env Env) int {
 	switch args[0] {
 	case "help", "-h", "--help":
 		fmt.Fprint(env.Stdout, usage)
+		return 0
+	case "version", "--version":
+		fmt.Fprintln(env.Stdout, "metagit", versionString())
 		return 0
 	case "serve":
 		return runServe(ctx, args[1:], env)

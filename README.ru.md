@@ -2,6 +2,9 @@
 
 [English](README.md) | Русский
 
+[![Go version](https://img.shields.io/github/go-mod/go-version/ekalinin/metagit)](go.mod)
+[![Release](https://img.shields.io/github/v/release/ekalinin/metagit)](https://github.com/ekalinin/metagit/releases)
+
 Self-hosted сервис, который для разработчика выглядит как обычный git remote, а сам хранит полную копию репозитория и рассылает ветки и теги на несколько git-хостингов (GitHub, Bitbucket, Codeberg и любые другие с доступом по git).
 
 Зачем: если проект живет на одном хостинге, его можно потерять (заблокировали аккаунт, хостинг закрылся, ошибочный force-push затер историю). metagit держит копии в нескольких местах и не теряет прежние состояния веток.
@@ -148,3 +151,5 @@ cd web && METAGIT_API_URL=http://localhost:9000 npm run dev
 Интеграционные тесты запускают настоящий git и собирают бинарник metagit. `METAGIT_TEST_LOG=1` выводит журнал сервиса в тестах.
 
 Уровни тестов, шаги сквозного теста и то, какие тесты проверяют каждый сценарий спецификаций, описаны в [docs/testing.md](docs/testing.md).
+
+Как выпустить релиз, описано в [docs/releasing.md](docs/releasing.md).

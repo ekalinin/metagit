@@ -1,7 +1,9 @@
 package store
 
 import (
+	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -91,6 +93,55 @@ func TestReopenDoesNotReapplyMigrations(t *testing.T) {
 	}
 	if _, err := s.ProjectByName(t.Context(), "foo"); err != nil {
 		t.Fatalf("data lost after reopen: %v", err)
+	}
+}
+
+func TestNewerSchemaIsRejected(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "metagit.db")
+	s, err := Open(t.Context(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var known int
+	if err := s.db.QueryRowContext(t.Context(), `SELECT MAX(version) FROM schema_migrations`).Scan(&known); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.ExecContext(t.Context(), `INSERT INTO schema_migrations (version, applied_at) VALUES (?, 0)`, known+1); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	_, err = Open(t.Context(), path)
+	if err == nil {
+		t.Fatal("a database with a newer schema was opened")
+	}
+	want := fmt.Sprintf("database schema version %d is newer than this metagit supports (%d): "+
+		"install a newer metagit or restore the data directory from a backup", known+1, known)
+	if err.Error() != want {
+		t.Fatalf("error %q, want %q", err, want)
+	}
+
+	// The database is not changed.
+	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var versions []int
+	rows, err := db.QueryContext(t.Context(), `SELECT version FROM schema_migrations ORDER BY version`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var v int
+		if err := rows.Scan(&v); err != nil {
+			t.Fatal(err)
+		}
+		versions = append(versions, v)
+	}
+	rows.Close()
+	if len(versions) != 2 || versions[1] != known+1 {
+		t.Fatalf("schema_migrations is %v", versions)
 	}
 }
 

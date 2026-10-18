@@ -66,7 +66,7 @@ func TestHelp(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code %d", code)
 	}
-	for _, cmd := range []string{"serve", "owner create", "hook", "askpass"} {
+	for _, cmd := range []string{"serve", "owner create", "hook", "askpass", "version"} {
 		if !strings.Contains(out, cmd) {
 			t.Errorf("help does not mention %q", cmd)
 		}

@@ -4,9 +4,23 @@
 
 - Linux или macOS.
 - `git` 2.30 или новее и клиент OpenSSH (`ssh`) на сервере.
-- Для сборки: Go 1.26 или новее, Node.js 24 или новее.
+- Только для сборки из исходников: Go 1.26 или новее, Node.js 24 или новее.
 
-## Сборка
+## Установка готового бинарника
+
+Готовые бинарники для Linux и macOS (amd64 и arm64) лежат на [странице релизов](https://github.com/ekalinin/metagit/releases). Веб-интерфейс встроен в бинарник.
+
+```sh
+os=linux arch=amd64        # или os=darwin, arch=arm64
+base=https://github.com/ekalinin/metagit/releases/latest/download
+curl -fLO "$base/metagit_${os}_${arch}.tar.gz"
+curl -fLO "$base/checksums.txt"
+sha256sum -c checksums.txt --ignore-missing     # macOS: shasum -a 256 -c checksums.txt --ignore-missing
+tar xzf "metagit_${os}_${arch}.tar.gz" metagit
+./metagit version
+```
+
+## Сборка из исходников
 
 ```sh
 make build        # веб-интерфейс и бинарник bin/metagit
@@ -21,7 +35,7 @@ make build        # веб-интерфейс и бинарник bin/metagit
    ```sh
    sudo useradd --system --home-dir /var/lib/metagit --shell /usr/sbin/nologin metagit
    sudo install -d -o metagit -g metagit -m 0700 /var/lib/metagit
-   sudo install -m 0755 bin/metagit /usr/local/bin/metagit
+   sudo install -m 0755 metagit /usr/local/bin/metagit     # после сборки из исходников: bin/metagit
    ```
 
 2. Создайте мастер-ключ для шифрования учетных данных хостингов и сохраните его вне каталога данных (например, в хранилище секретов):
@@ -74,6 +88,41 @@ make build        # веб-интерфейс и бинарник bin/metagit
    ```
 
    Для nginx отключите ограничение размера тела запроса (`client_max_body_size 0;`), иначе крупные push не пройдут. Можно обойтись без proxy: флаги `--tls-cert` и `--tls-key` включают TLS в самом metagit.
+
+## Обновление
+
+1. Скачайте и проверьте архив новой версии, как в разделе "Установка готового бинарника", или соберите ее из исходников.
+2. Остановите сервис и сделайте копию каталога данных (и мастер-ключа, если он хранится отдельно):
+
+   ```sh
+   sudo systemctl stop metagit
+   sudo cp -a /var/lib/metagit /var/lib/metagit.bak
+   ```
+
+3. Замените бинарник и запустите сервис:
+
+   ```sh
+   sudo install -m 0755 metagit /usr/local/bin/metagit
+   sudo systemctl start metagit
+   ```
+
+4. Проверьте версию в строке `metagit started` лога сервиса (`journalctl -u metagit`).
+
+Сервис останавливают до замены бинарника: git-хуки репозиториев вызывают бинарник по тому же пути, и до перезапуска push обрабатывали бы новый бинарник и старый сервис вместе. При старте новая версия сама перезаписывает хуки и обновляет схему базы.
+
+## Откат
+
+1. Остановите сервис и верните копию каталога данных, сделанную перед обновлением:
+
+   ```sh
+   sudo systemctl stop metagit
+   sudo mv /var/lib/metagit /var/lib/metagit.failed
+   sudo mv /var/lib/metagit.bak /var/lib/metagit
+   ```
+
+2. Поставьте прежний бинарник и запустите сервис.
+
+Push, принятые после обновления, останутся только в `/var/lib/metagit.failed`, их нужно отправить заново из локальных копий. Если вернуть только прежний бинарник, а новая версия изменила схему базы, прежний бинарник не запустится и напишет `database schema version N is newer than this metagit supports (M)`.
 
 ## Настройки `metagit serve`
 

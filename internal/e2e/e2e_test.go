@@ -339,4 +339,8 @@ func TestEndToEnd(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dataDir, "metagit.db")); err != nil {
 		t.Fatal(err)
 	}
+	// The start line names the version.
+	if !strings.Contains(logs.String(), `msg="metagit started" version=`) {
+		t.Fatalf("no version in the start line:\n%s", logs.String())
+	}
 }

@@ -40,7 +40,7 @@ func runServe(ctx context.Context, args []string, env Env) int {
 		log.Error("cannot listen", "addr", cfg.SSHAddr, "err", err)
 		return 1
 	}
-	log.Info("metagit started", "http", httpL.Addr().String(), "ssh", sshL.Addr().String(),
+	log.Info("metagit started", "version", versionString(), "http", httpL.Addr().String(), "ssh", sshL.Addr().String(),
 		"base_url", cfg.BaseURL, "ssh_url", cfg.SSHURL, "data_dir", cfg.DataDir)
 	if err := a.Serve(ctx, httpL, sshL); err != nil {
 		log.Error("server stopped", "err", err)
