@@ -114,12 +114,28 @@ func (s *Store) migrate(ctx context.Context) error {
 		return err
 	}
 	slices.Sort(names)
+	// A database migrated by a newer metagit is left alone: this binary does
+	// not know the newer schema.
+	newest, known := 0, 0
+	for v := range applied {
+		newest = max(newest, v)
+	}
+	for _, name := range names {
+		v, err := migrationVersion(name)
+		if err != nil {
+			return err
+		}
+		known = max(known, v)
+	}
+	if newest > known {
+		return fmt.Errorf("database schema version %d is newer than this metagit supports (%d): "+
+			"install a newer metagit or restore the data directory from a backup", newest, known)
+	}
 	for _, name := range names {
 		base := filepath.Base(name)
-		prefix, _, _ := strings.Cut(base, "_")
-		version, err := strconv.Atoi(prefix)
+		version, err := migrationVersion(name)
 		if err != nil {
-			return fmt.Errorf("bad migration name %s", base)
+			return err
 		}
 		if applied[version] {
 			continue
@@ -140,6 +156,17 @@ func (s *Store) migrate(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// migrationVersion returns NNNN of migrations/NNNN_name.sql.
+func migrationVersion(name string) (int, error) {
+	base := filepath.Base(name)
+	prefix, _, _ := strings.Cut(base, "_")
+	v, err := strconv.Atoi(prefix)
+	if err != nil {
+		return 0, fmt.Errorf("bad migration name %s", base)
+	}
+	return v, nil
 }
 
 // ms converts time to unix milliseconds; the zero time becomes NULL.

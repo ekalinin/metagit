@@ -1,0 +1,55 @@
+# Release build: run by .github/workflows/release.yml on a v* tag.
+# Dry run: docs/releasing.md.
+version: 2
+project_name: metagit
+
+before:
+  hooks:
+    # A file listed in archives.files that does not exist is skipped silently.
+    - test -f LICENSE
+    # The web interface is the same for every platform, so it is built once.
+    - make web
+
+builds:
+  - main: ./cmd/metagit
+    binary: metagit
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/ekalinin/metagit/internal/cli.version={{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    # No version in the name: releases/latest/download/<name> stays the same.
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - INSTALL.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - '^docs\(openspec\)'
+      - '^Merge '
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Other
+      order: 999
+
+release:
+  draft: false
