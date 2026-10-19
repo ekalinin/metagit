@@ -218,7 +218,7 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
   - `goreleaser release --snapshot --clean` дает в `dist/` архивы `metagit_{linux,darwin}_{amd64,arm64}.tar.gz` с `metagit`, `LICENSE`, `README.md`, `INSTALL.md` и `checksums.txt`, `dist/` не виден в `git status`;
   - без `LICENSE` сборка останавливается на хуке `test -f LICENSE`;
   - на локальном теге `v0.1.0` `goreleaser release --skip=publish,announce --clean` пишет `dist/CHANGELOG.md`: коммиты `feat` в Features, `fix` в Fixes, коммитов `docs(openspec)` и merge-коммитов нет;
-  - команды раздела "Установка готового бинарника" `INSTALL.md` с архивом из `dist/` вместо скачивания: на macOS (`shasum`) и в контейнере Debian (`sha256sum`, linux/arm64) сумма сходится, `metagit version` печатает `metagit 0.1.0 (<коммит>)`;
+  - команды раздела "Установка готового бинарника" `INSTALL.ru.md` с архивом из `dist/` вместо скачивания: на macOS (`shasum`) и в контейнере Debian (`sha256sum`, linux/arm64) сумма сходится, `metagit version` печатает `metagit 0.1.0 (<коммит>)`;
   - `metagit serve` из архива darwin/arm64 отдает веб-консоль, а не страницу о несобранном интерфейсе.
 - **Проверка `make build`.** В рабочей копии с незакоммиченными изменениями `./bin/metagit version` и `--version` печатают `metagit dev (<первые 7 символов HEAD>, modified)`, строка `metagit started` в логе `metagit serve` содержит то же значение `version`.
 - **Шаги установки из `INSTALL.md` в чистом контейнере Debian** (git 2.47): установка, создание владельца, запуск, токен, push по HTTP, clone по SSH, экспорт. Systemd, reverse proxy с TLS и доставка на настоящие хостинги не проверялись.

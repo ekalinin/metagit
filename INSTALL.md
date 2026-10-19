@@ -1,17 +1,19 @@
-# Установка metagit
+# Installing metagit
 
-## Требования
+English | [Русский](INSTALL.ru.md)
 
-- Linux или macOS.
-- `git` 2.30 или новее и клиент OpenSSH (`ssh`) на сервере.
-- Только для сборки из исходников: Go 1.26 или новее, Node.js 24 или новее.
+## Requirements
 
-## Установка готового бинарника
+- Linux or macOS.
+- `git` 2.30 or newer and the OpenSSH client (`ssh`) on the server.
+- Only for building from source: Go 1.26 or newer, Node.js 24 or newer.
 
-Готовые бинарники для Linux и macOS (amd64 и arm64) лежат на [странице релизов](https://github.com/ekalinin/metagit/releases). Веб-интерфейс встроен в бинарник.
+## Installing a ready binary
+
+Ready binaries for Linux and macOS (amd64 and arm64) are on the [releases page](https://github.com/ekalinin/metagit/releases). The web console is built into the binary.
 
 ```sh
-os=linux arch=amd64        # или os=darwin, arch=arm64
+os=linux arch=amd64        # or os=darwin, arch=arm64
 base=https://github.com/ekalinin/metagit/releases/latest/download
 curl -fLO "$base/metagit_${os}_${arch}.tar.gz"
 curl -fLO "$base/checksums.txt"
@@ -20,41 +22,41 @@ tar xzf "metagit_${os}_${arch}.tar.gz" metagit
 ./metagit version
 ```
 
-## Сборка из исходников
+## Building from source
 
 ```sh
-make build        # веб-интерфейс и бинарник bin/metagit
+make build        # web console and the bin/metagit binary
 ```
 
-Получается один бинарник, веб-интерфейс встроен в него.
+The result is a single binary with the web console built in.
 
-## Установка на сервер
+## Installing on a server
 
-1. Создайте системного пользователя и каталог данных:
+1. Create a system user and the data directory:
 
    ```sh
    sudo useradd --system --home-dir /var/lib/metagit --shell /usr/sbin/nologin metagit
    sudo install -d -o metagit -g metagit -m 0700 /var/lib/metagit
-   sudo install -m 0755 metagit /usr/local/bin/metagit     # после сборки из исходников: bin/metagit
+   sudo install -m 0755 metagit /usr/local/bin/metagit     # after building from source: bin/metagit
    ```
 
-2. Создайте мастер-ключ для шифрования учетных данных хостингов и сохраните его вне каталога данных (например, в хранилище секретов):
+2. Create a master key for encrypting hosting credentials and keep it outside the data directory (for example, in a secret store):
 
    ```sh
    openssl rand -base64 32
    ```
 
-   Ключ передается через переменную `METAGIT_SECRET_KEY`. Если ее нет, metagit создаст файл `secret.key` в каталоге данных, но тогда ключ лежит на том же диске, что и база.
+   The key is passed in the `METAGIT_SECRET_KEY` variable. Without it, metagit creates the file `secret.key` in the data directory, but then the key is on the same disk as the database.
 
-3. Создайте владельца. У metagit ровно один владелец, и создается он только командой на сервере:
+3. Create the owner. metagit has exactly one owner, and it is created only by a command on the server:
 
    ```sh
    sudo -u metagit metagit owner create --name eugene --data-dir /var/lib/metagit
    ```
 
-   Пароль спрашивается в терминале (или читается из первой строки stdin). Повторный вызов с тем же именем меняет пароль.
+   The password is asked in the terminal (or read from the first line of stdin). Running the command again with the same name changes the password.
 
-4. Запустите сервис, например через systemd (`/etc/systemd/system/metagit.service`):
+4. Start the service, for example with systemd (`/etc/systemd/system/metagit.service`):
 
    ```ini
    [Unit]
@@ -77,9 +79,9 @@ make build        # веб-интерфейс и бинарник bin/metagit
    WantedBy=multi-user.target
    ```
 
-   В `/etc/metagit/env` (права 0600) положите `METAGIT_SECRET_KEY=...`.
+   Put `METAGIT_SECRET_KEY=...` in `/etc/metagit/env` (mode 0600).
 
-5. TLS. Проще всего поставить перед metagit reverse proxy, например Caddy:
+5. TLS. The simplest way is a reverse proxy in front of metagit, for example Caddy:
 
    ```
    git.example.com {
@@ -87,34 +89,34 @@ make build        # веб-интерфейс и бинарник bin/metagit
    }
    ```
 
-   За proxy все запросы приходят в metagit с адреса proxy, а неудачные попытки входа ограничиваются по адресу клиента. Без настройки любой, кто 5 раз введет неверный пароль, на 15 минут заблокирует вход и владельцу. Поэтому укажите адрес proxy в `--trusted-proxies` (для Caddy из примера - `--trusted-proxies 127.0.0.1`): для запросов с этого адреса metagit берет адрес клиента из заголовка `X-Forwarded-For`. Caddy передает этот заголовок по умолчанию.
+   Behind a proxy, all requests reach metagit from the proxy address, while failed sign-in attempts are limited per client address. Without this setting, anyone who enters a wrong password 5 times blocks sign-in for the owner too, for 15 minutes. So set the proxy address in `--trusted-proxies` (for the Caddy example, `--trusted-proxies 127.0.0.1`): for requests from this address metagit takes the client address from the `X-Forwarded-For` header. Caddy sends this header by default.
 
-   Для nginx отключите ограничение размера тела запроса (`client_max_body_size 0;`), иначе крупные push не пройдут, и передайте адрес клиента: `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. Можно обойтись без proxy: флаги `--tls-cert` и `--tls-key` включают TLS в самом metagit.
+   For nginx, turn off the request body size limit (`client_max_body_size 0;`), otherwise large pushes fail, and pass the client address: `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. You can do without a proxy: the `--tls-cert` and `--tls-key` flags turn on TLS in metagit itself.
 
-## Обновление
+## Updating
 
-1. Скачайте и проверьте архив новой версии, как в разделе "Установка готового бинарника", или соберите ее из исходников.
-2. Остановите сервис и сделайте копию каталога данных (и мастер-ключа, если он хранится отдельно):
+1. Download and check the archive of the new version as in "Installing a ready binary", or build it from source.
+2. Stop the service and make a copy of the data directory (and of the master key, if it is stored separately):
 
    ```sh
    sudo systemctl stop metagit
    sudo cp -a /var/lib/metagit /var/lib/metagit.bak
    ```
 
-3. Замените бинарник и запустите сервис:
+3. Replace the binary and start the service:
 
    ```sh
    sudo install -m 0755 metagit /usr/local/bin/metagit
    sudo systemctl start metagit
    ```
 
-4. Проверьте версию в строке `metagit started` лога сервиса (`journalctl -u metagit`).
+4. Check the version in the `metagit started` line of the service log (`journalctl -u metagit`).
 
-Сервис останавливают до замены бинарника: git-хуки репозиториев вызывают бинарник по тому же пути, и до перезапуска push обрабатывали бы новый бинарник и старый сервис вместе. При старте новая версия сама перезаписывает хуки и обновляет схему базы.
+The service is stopped before the binary is replaced: the git hooks of the repositories call the binary at the same path, so until the restart pushes would be handled by the new binary and the old service together. On start, the new version rewrites the hooks and updates the database schema itself.
 
-## Откат
+## Rolling back
 
-1. Остановите сервис и верните копию каталога данных, сделанную перед обновлением:
+1. Stop the service and put back the copy of the data directory made before the update:
 
    ```sh
    sudo systemctl stop metagit
@@ -122,24 +124,24 @@ make build        # веб-интерфейс и бинарник bin/metagit
    sudo mv /var/lib/metagit.bak /var/lib/metagit
    ```
 
-2. Поставьте прежний бинарник и запустите сервис.
+2. Install the previous binary and start the service.
 
-Push, принятые после обновления, останутся только в `/var/lib/metagit.failed`, их нужно отправить заново из локальных копий. Если вернуть только прежний бинарник, а новая версия изменила схему базы, прежний бинарник не запустится и напишет `database schema version N is newer than this metagit supports (M)`.
+Pushes accepted after the update remain only in `/var/lib/metagit.failed`, they have to be pushed again from local copies. If you put back only the previous binary and the new version changed the database schema, the previous binary does not start and prints `database schema version N is newer than this metagit supports (M)`.
 
-## Настройки `metagit serve`
+## `metagit serve` settings
 
-| Флаг | Переменная | По умолчанию | Назначение |
+| Flag | Variable | Default | Purpose |
 |---|---|---|---|
-| `--data-dir` | `METAGIT_DATA_DIR` | `./data` | репозитории, база, ключи |
-| `--http-addr` | `METAGIT_HTTP_ADDR` | `:8080` | веб-интерфейс, API и git по HTTP |
-| `--ssh-addr` | `METAGIT_SSH_ADDR` | `:2222` | git по SSH |
-| `--base-url` | `METAGIT_BASE_URL` | из `--http-addr` | адрес для показа ссылок клонирования |
-| `--ssh-url` | `METAGIT_SSH_URL` | из `--ssh-addr` | адрес SSH для показа ссылок клонирования |
-| `--tls-cert`, `--tls-key` | `METAGIT_TLS_CERT`, `METAGIT_TLS_KEY` | не заданы | TLS без reverse proxy |
-| `--trusted-proxies` | `METAGIT_TRUSTED_PROXIES` | не заданы | адреса reverse proxy (IP или CIDR через запятую), для запросов с которых адрес клиента при ограничении попыток входа берется из `X-Forwarded-For` |
-| `--push-status-timeout` | `METAGIT_PUSH_STATUS_TIMEOUT` | `5s` | сколько push ждет результатов доставки |
-| `--max-parallel-deliveries` | `METAGIT_MAX_PARALLEL_DELIVERIES` | `4` | одновременные доставки |
-| `--git-timeout` | `METAGIT_GIT_TIMEOUT` | `10m` | таймаут одной операции с хостингом |
-| | `METAGIT_SECRET_KEY` | файл `secret.key` | мастер-ключ (base64 или hex, 32 байта) |
+| `--data-dir` | `METAGIT_DATA_DIR` | `./data` | repositories, database, keys |
+| `--http-addr` | `METAGIT_HTTP_ADDR` | `:8080` | web console, API and git over HTTP |
+| `--ssh-addr` | `METAGIT_SSH_ADDR` | `:2222` | git over SSH |
+| `--base-url` | `METAGIT_BASE_URL` | from `--http-addr` | address used to show clone links |
+| `--ssh-url` | `METAGIT_SSH_URL` | from `--ssh-addr` | SSH address used to show clone links |
+| `--tls-cert`, `--tls-key` | `METAGIT_TLS_CERT`, `METAGIT_TLS_KEY` | not set | TLS without a reverse proxy |
+| `--trusted-proxies` | `METAGIT_TRUSTED_PROXIES` | not set | reverse proxy addresses (IPs or CIDRs, comma-separated); for requests from them the client address for the sign-in attempt limit is taken from `X-Forwarded-For` |
+| `--push-status-timeout` | `METAGIT_PUSH_STATUS_TIMEOUT` | `5s` | how long a push waits for delivery results |
+| `--max-parallel-deliveries` | `METAGIT_MAX_PARALLEL_DELIVERIES` | `4` | simultaneous deliveries |
+| `--git-timeout` | `METAGIT_GIT_TIMEOUT` | `10m` | timeout of one operation with a hosting |
+| | `METAGIT_SECRET_KEY` | the `secret.key` file | master key (base64 or hex, 32 bytes) |
 
-Флаг важнее переменной окружения, переменная важнее значения по умолчанию.
+A flag takes precedence over the environment variable, and the variable over the default.

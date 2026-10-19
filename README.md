@@ -43,7 +43,7 @@ Why: a project that lives on one hosting can be lost (the account gets blocked, 
 
 ## Installation
 
-Requirements, building, installing on a server and `metagit serve` settings are described in [INSTALL.md](INSTALL.md) (in Russian).
+Requirements, building, installing on a server and `metagit serve` settings are described in [INSTALL.md](INSTALL.md).
 
 ## Usage
 
