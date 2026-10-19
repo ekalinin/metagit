@@ -405,6 +405,12 @@ td.actions {
   min-width: 15.5rem;
 }
 
+/* Russian buttons wrap one, two and one per row at 15rem as well; the extra
+   0.5rem made the table 5 px wider than its wrapper at 1280 px. */
+:lang(ru) .targets-table td.actions {
+  min-width: 15rem;
+}
+
 td.actions button {
   margin: 0 0 0.35rem 0.35rem;
 }
