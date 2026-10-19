@@ -47,8 +47,6 @@ Requirements, building, installing on a server and `metagit serve` settings are 
 
 ## Usage
 
-The web console is in Russian for now, its labels are given in quotes.
-
 1. Open the web console and sign in.
 2. In Settings, create a git access token (it is shown once) and, if you need SSH, add your public key.
 3. Create a project. Its page shows the clone addresses:
