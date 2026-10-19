@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -140,6 +141,43 @@ func TestLoginRateLimit(t *testing.T) {
 	a.now = func() time.Time { return now.Add(16 * time.Minute) }
 	if _, err := a.Login(ctx, "eugene", "password-1", "2.2.2.2:1000"); err != nil {
 		t.Fatalf("block must end after the window: %v", err)
+	}
+}
+
+func TestClientAddr(t *testing.T) {
+	trusted := []netip.Prefix{netip.MustParsePrefix("10.0.0.1/32"), netip.MustParsePrefix("192.168.0.0/16"), netip.MustParsePrefix("::1/128")}
+	cases := []struct {
+		name    string
+		remote  string
+		xff     []string
+		trusted []netip.Prefix
+		want    string
+	}{
+		{"no trusted proxies", "10.0.0.1:1000", []string{"198.51.100.1"}, nil, "10.0.0.1:1000"},
+		{"untrusted peer", "203.0.113.9:1000", []string{"198.51.100.1"}, trusted, "203.0.113.9:1000"},
+		{"no header", "10.0.0.1:1000", nil, trusted, "10.0.0.1:1000"},
+		{"client of the proxy", "10.0.0.1:1000", []string{"198.51.100.1"}, trusted, "198.51.100.1"},
+		{"spoofed left part", "10.0.0.1:1000", []string{"1.1.1.1, 198.51.100.1"}, trusted, "198.51.100.1"},
+		{"chain of proxies", "10.0.0.1:1000", []string{"1.1.1.1, 198.51.100.1, 192.168.1.5"}, trusted, "198.51.100.1"},
+		{"several headers", "10.0.0.1:1000", []string{"1.1.1.1", "198.51.100.1, 192.168.1.5"}, trusted, "198.51.100.1"},
+		{"garbage left of the client", "10.0.0.1:1000", []string{"garbage, 198.51.100.1"}, trusted, "198.51.100.1"},
+		{"garbage", "10.0.0.1:1000", []string{"garbage"}, trusted, "10.0.0.1:1000"},
+		{"empty header", "10.0.0.1:1000", []string{""}, trusted, "10.0.0.1:1000"},
+		{"only proxies", "10.0.0.1:1000", []string{"192.168.1.5"}, trusted, "10.0.0.1:1000"},
+		{"IPv6", "[::1]:1000", []string{"2001:db8::1"}, trusted, "2001:db8::1"},
+		{"IPv4-mapped", "10.0.0.1:1000", []string{"::ffff:198.51.100.1"}, trusted, "198.51.100.1"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, "/api/login", nil)
+			r.RemoteAddr = tc.remote
+			for _, v := range tc.xff {
+				r.Header.Add("X-Forwarded-For", v)
+			}
+			if got := ClientAddr(r, tc.trusted); got != tc.want {
+				t.Fatalf("ClientAddr = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 

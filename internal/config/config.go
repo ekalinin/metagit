@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,6 +23,7 @@ type Config struct {
 	SSHURL                string
 	TLSCert               string
 	TLSKey                string
+	TrustedProxies        []netip.Prefix
 	PushStatusTimeout     time.Duration
 	MaxParallelDeliveries int
 	GitTimeout            time.Duration
@@ -51,6 +54,7 @@ func Load(args []string, getenv func(string) string, output io.Writer) (*Config,
 	b.str(&cfg.SSHURL, "ssh-url", "METAGIT_SSH_URL", "", "public SSH URL used to show clone addresses (default derived from --ssh-addr)")
 	b.str(&cfg.TLSCert, "tls-cert", "METAGIT_TLS_CERT", "", "TLS certificate file; without it HTTP is served in plain text")
 	b.str(&cfg.TLSKey, "tls-key", "METAGIT_TLS_KEY", "", "TLS key file")
+	b.prefixes(&cfg.TrustedProxies, "trusted-proxies", "METAGIT_TRUSTED_PROXIES", "comma-separated IPs or CIDRs of reverse proxies trusted to set X-Forwarded-For")
 	b.dur(&cfg.PushStatusTimeout, "push-status-timeout", "METAGIT_PUSH_STATUS_TIMEOUT", DefaultPushStatusTimeout, "how long a push waits for delivery results")
 	b.int(&cfg.MaxParallelDeliveries, "max-parallel-deliveries", "METAGIT_MAX_PARALLEL_DELIVERIES", DefaultMaxParallelDeliveries, "maximum number of simultaneous deliveries")
 	b.dur(&cfg.GitTimeout, "git-timeout", "METAGIT_GIT_TIMEOUT", DefaultGitTimeout, "timeout of a single git operation with a hosting")
@@ -152,6 +156,47 @@ func (b *binder) int(p *int, name, env string, def int, usage string) {
 		}
 	}
 	b.fs.IntVar(p, name, def, usage+" (env "+env+")")
+}
+
+func (b *binder) prefixes(p *[]netip.Prefix, name, env, usage string) {
+	if v := b.getenv(env); v != "" {
+		list, err := parsePrefixes(v)
+		if err != nil {
+			b.fail(env, err)
+		} else {
+			*p = list
+		}
+	}
+	b.fs.Func(name, usage+" (env "+env+")", func(s string) (err error) {
+		*p, err = parsePrefixes(s)
+		return err
+	})
+}
+
+// parsePrefixes parses a comma-separated list of IP addresses and CIDRs.
+func parsePrefixes(s string) ([]netip.Prefix, error) {
+	var list []netip.Prefix
+	for item := range strings.SplitSeq(s, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if strings.Contains(item, "/") {
+			p, err := netip.ParsePrefix(item)
+			if err != nil {
+				return nil, err
+			}
+			list = append(list, p.Masked())
+			continue
+		}
+		addr, err := netip.ParseAddr(item)
+		if err != nil {
+			return nil, err
+		}
+		addr = addr.Unmap()
+		list = append(list, netip.PrefixFrom(addr, addr.BitLen()))
+	}
+	return list, nil
 }
 
 // Names of files and directories inside the data directory.

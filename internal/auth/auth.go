@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -268,6 +270,38 @@ func (a *Service) CheckSSHKey(ctx context.Context, key ssh.PublicKey) bool {
 		return false
 	}
 	return subtle.ConstantTimeCompare(parsed.Marshal(), key.Marshal()) == 1
+}
+
+// ClientAddr returns the address that identifies the client of r for the
+// login limit. Only when the direct peer is a trusted proxy is the address
+// taken from X-Forwarded-For: the rightmost entry that is not a trusted proxy.
+// Otherwise, or when the header is missing or malformed, it is r.RemoteAddr.
+func ClientAddr(r *http.Request, trusted []netip.Prefix) string {
+	if len(trusted) == 0 {
+		return r.RemoteAddr
+	}
+	peer, err := netip.ParseAddr(clientKey(r.RemoteAddr))
+	if err != nil || !trustedProxy(peer, trusted) {
+		return r.RemoteAddr
+	}
+	// Each proxy appends the address of its peer, so the client can forge
+	// only the entries on the left.
+	hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
+	for i := len(hops) - 1; i >= 0; i-- {
+		addr, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
+		if err != nil {
+			break
+		}
+		if !trustedProxy(addr, trusted) {
+			return addr.Unmap().String()
+		}
+	}
+	return r.RemoteAddr
+}
+
+func trustedProxy(addr netip.Addr, trusted []netip.Prefix) bool {
+	addr = addr.Unmap().WithZone("")
+	return slices.ContainsFunc(trusted, func(p netip.Prefix) bool { return p.Contains(addr) })
 }
 
 func clientKey(remoteAddr string) string {

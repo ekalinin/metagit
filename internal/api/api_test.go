@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"strings"
 	"testing"
 
@@ -87,6 +88,59 @@ func TestServerWithoutOwner(t *testing.T) {
 	status, body = c.Do("POST", "/api/login", map[string]string{"name": "x", "password": "password-1"})
 	if status != http.StatusConflict || !strings.Contains(body, "metagit owner create") {
 		t.Fatalf("login without owner: %d %s", status, body)
+	}
+}
+
+// loginVia sends a login request with X-Forwarded-For, as a reverse proxy
+// does, and returns the status.
+func loginVia(t *testing.T, e *apptest.Env, forwardedFor, password string) int {
+	t.Helper()
+	body := fmt.Sprintf(`{"name":%q,"password":%q}`, apptest.OwnerName, password)
+	req, err := http.NewRequest("POST", e.BaseURL+"/api/login", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-For", forwardedFor)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	return res.StatusCode
+}
+
+// Behind a reverse proxy every request comes from the proxy address, so
+// failed logins of one client must not block the others.
+func TestLoginLimitBehindTrustedProxy(t *testing.T) {
+	e := apptest.Start(t, apptest.Options{TrustedProxies: []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}})
+	for range 5 {
+		if status := loginVia(t, e, "203.0.113.1", "wrong-password"); status != http.StatusUnauthorized {
+			t.Fatalf("wrong password: %d", status)
+		}
+	}
+	if status := loginVia(t, e, "203.0.113.1", apptest.OwnerPassword); status != http.StatusTooManyRequests {
+		t.Fatalf("the client with failed logins must be blocked: %d", status)
+	}
+	if status := loginVia(t, e, "198.51.100.1, 203.0.113.1", apptest.OwnerPassword); status != http.StatusTooManyRequests {
+		t.Fatalf("a forged address before the client address must be ignored: %d", status)
+	}
+	if status := loginVia(t, e, "203.0.113.2", apptest.OwnerPassword); status != http.StatusOK {
+		t.Fatalf("another client behind the proxy must not be blocked: %d", status)
+	}
+}
+
+// A peer that is not a trusted proxy cannot choose its address with
+// X-Forwarded-For.
+func TestLoginLimitIgnoresUntrustedForwardedFor(t *testing.T) {
+	e := apptest.Start(t, apptest.Options{TrustedProxies: []netip.Prefix{netip.MustParsePrefix("10.0.0.1/32")}})
+	for i := range 5 {
+		if status := loginVia(t, e, fmt.Sprintf("203.0.113.%d", i+1), "wrong-password"); status != http.StatusUnauthorized {
+			t.Fatalf("wrong password: %d", status)
+		}
+	}
+	if status := loginVia(t, e, "203.0.113.99", apptest.OwnerPassword); status != http.StatusTooManyRequests {
+		t.Fatalf("X-Forwarded-For of an untrusted peer must be ignored: %d", status)
 	}
 }
 

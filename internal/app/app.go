@@ -217,13 +217,14 @@ func (a *App) configureRepos(ctx context.Context) error {
 // web interface.
 func (a *App) Handler() http.Handler {
 	apiHandler := (&api.API{
-		Core:          a.Core,
-		Auth:          a.Auth,
-		Transfer:      a.Transfer,
-		BaseURL:       a.Config.BaseURL,
-		SSHURL:        a.Config.SSHURL,
-		SecureCookies: a.Config.TLSCert != "" || strings.HasPrefix(a.Config.BaseURL, "https://"),
-		Log:           a.Log,
+		Core:           a.Core,
+		Auth:           a.Auth,
+		Transfer:       a.Transfer,
+		BaseURL:        a.Config.BaseURL,
+		SSHURL:         a.Config.SSHURL,
+		SecureCookies:  a.Config.TLSCert != "" || strings.HasPrefix(a.Config.BaseURL, "https://"),
+		Log:            a.Log,
+		TrustedProxies: a.Config.TrustedProxies,
 	}).Handler()
 	gitHandler := &githttp.Handler{
 		ReposDir:      a.Repos.ReposDir,
