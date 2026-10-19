@@ -1,5 +1,7 @@
 # Установка metagit
 
+[English](INSTALL.md) | Русский
+
 ## Требования
 
 - Linux или macOS.
