@@ -2,6 +2,8 @@ package config
 
 import (
 	"io"
+	"net/netip"
+	"slices"
 	"testing"
 	"time"
 )
@@ -32,6 +34,9 @@ func TestDefaults(t *testing.T) {
 	}
 	if cfg.SSHURL != "ssh://git@localhost:2222" {
 		t.Errorf("ssh url = %q", cfg.SSHURL)
+	}
+	if len(cfg.TrustedProxies) != 0 {
+		t.Errorf("trusted proxies = %v", cfg.TrustedProxies)
 	}
 }
 
@@ -76,6 +81,8 @@ func TestInvalidValues(t *testing.T) {
 		{"bad env int", nil, map[string]string{"METAGIT_MAX_PARALLEL_DELIVERIES": "many"}},
 		{"zero parallel", []string{"--max-parallel-deliveries", "0"}, nil},
 		{"tls cert without key", []string{"--tls-cert", "c.pem"}, nil},
+		{"bad env trusted proxy", nil, map[string]string{"METAGIT_TRUSTED_PROXIES": "127.0.0.1,proxy.local"}},
+		{"bad trusted proxy CIDR", []string{"--trusted-proxies", "10.0.0.0/33"}, nil},
 		{"extra args", []string{"extra"}, nil},
 	}
 	for _, tc := range cases {
@@ -94,5 +101,27 @@ func TestTLSChangesDefaultScheme(t *testing.T) {
 	}
 	if cfg.BaseURL != "https://localhost:443" {
 		t.Errorf("base url = %q", cfg.BaseURL)
+	}
+}
+
+func TestTrustedProxies(t *testing.T) {
+	cfg, err := Load(nil, env(map[string]string{"METAGIT_TRUSTED_PROXIES": "127.0.0.1, 10.1.2.3/8,::1"}), io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []netip.Prefix{
+		netip.MustParsePrefix("127.0.0.1/32"),
+		netip.MustParsePrefix("10.0.0.0/8"),
+		netip.MustParsePrefix("::1/128"),
+	}
+	if !slices.Equal(cfg.TrustedProxies, want) {
+		t.Errorf("trusted proxies = %v", cfg.TrustedProxies)
+	}
+	cfg, err = Load([]string{"--trusted-proxies", "192.168.0.10"}, env(map[string]string{"METAGIT_TRUSTED_PROXIES": "127.0.0.1"}), io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(cfg.TrustedProxies, []netip.Prefix{netip.MustParsePrefix("192.168.0.10/32")}) {
+		t.Errorf("flag did not win: %v", cfg.TrustedProxies)
 	}
 }

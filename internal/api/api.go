@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
@@ -37,6 +38,9 @@ type API struct {
 	// SecureCookies sets the Secure flag on the session cookie.
 	SecureCookies bool
 	Log           *slog.Logger
+	// TrustedProxies are reverse proxies whose X-Forwarded-For identifies
+	// the client for the login limit.
+	TrustedProxies []netip.Prefix
 }
 
 // Handler returns the HTTP handler of the API.
@@ -191,7 +195,7 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) error {
 	} else if !exists {
 		return errorf(http.StatusConflict, "owner is not created: run metagit owner create on the server")
 	}
-	id, err := a.Auth.Login(r.Context(), in.Name, in.Password, r.RemoteAddr)
+	id, err := a.Auth.Login(r.Context(), in.Name, in.Password, auth.ClientAddr(r, a.TrustedProxies))
 	switch {
 	case errors.Is(err, auth.ErrTooManyAttempts):
 		return errorf(http.StatusTooManyRequests, "too many failed login attempts, try again later")

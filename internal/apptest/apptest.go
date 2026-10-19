@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/cookiejar"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -48,6 +49,8 @@ type Options struct {
 	RetryMax          time.Duration
 	// NoOwner starts an instance where the owner is not created yet.
 	NoOwner bool
+	// TrustedProxies are reverse proxies whose X-Forwarded-For is used.
+	TrustedProxies []netip.Prefix
 }
 
 // Env is a running instance.
@@ -83,6 +86,7 @@ func Start(t testing.TB, o Options) *Env {
 		SSHAddr:               sshL.Addr().String(),
 		BaseURL:               "http://" + httpL.Addr().String(),
 		SSHURL:                "ssh://git@" + sshL.Addr().String(),
+		TrustedProxies:        o.TrustedProxies,
 		PushStatusTimeout:     cmp.Or(o.PushStatusTimeout, 5*time.Second),
 		MaxParallelDeliveries: 4,
 		GitTimeout:            time.Minute,

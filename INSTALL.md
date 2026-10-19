@@ -87,7 +87,9 @@ make build        # веб-интерфейс и бинарник bin/metagit
    }
    ```
 
-   Для nginx отключите ограничение размера тела запроса (`client_max_body_size 0;`), иначе крупные push не пройдут. Можно обойтись без proxy: флаги `--tls-cert` и `--tls-key` включают TLS в самом metagit.
+   За proxy все запросы приходят в metagit с адреса proxy, а неудачные попытки входа ограничиваются по адресу клиента. Без настройки любой, кто 5 раз введет неверный пароль, на 15 минут заблокирует вход и владельцу. Поэтому укажите адрес proxy в `--trusted-proxies` (для Caddy из примера - `--trusted-proxies 127.0.0.1`): для запросов с этого адреса metagit берет адрес клиента из заголовка `X-Forwarded-For`. Caddy передает этот заголовок по умолчанию.
+
+   Для nginx отключите ограничение размера тела запроса (`client_max_body_size 0;`), иначе крупные push не пройдут, и передайте адрес клиента: `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. Можно обойтись без proxy: флаги `--tls-cert` и `--tls-key` включают TLS в самом metagit.
 
 ## Обновление
 
@@ -134,6 +136,7 @@ Push, принятые после обновления, останутся то�
 | `--base-url` | `METAGIT_BASE_URL` | из `--http-addr` | адрес для показа ссылок клонирования |
 | `--ssh-url` | `METAGIT_SSH_URL` | из `--ssh-addr` | адрес SSH для показа ссылок клонирования |
 | `--tls-cert`, `--tls-key` | `METAGIT_TLS_CERT`, `METAGIT_TLS_KEY` | не заданы | TLS без reverse proxy |
+| `--trusted-proxies` | `METAGIT_TRUSTED_PROXIES` | не заданы | адреса reverse proxy (IP или CIDR через запятую), для запросов с которых адрес клиента при ограничении попыток входа берется из `X-Forwarded-For` |
 | `--push-status-timeout` | `METAGIT_PUSH_STATUS_TIMEOUT` | `5s` | сколько push ждет результатов доставки |
 | `--max-parallel-deliveries` | `METAGIT_MAX_PARALLEL_DELIVERIES` | `4` | одновременные доставки |
 | `--git-timeout` | `METAGIT_GIT_TIMEOUT` | `10m` | таймаут одной операции с хостингом |
