@@ -155,3 +155,7 @@ Integration tests run real git and build the metagit binary. `METAGIT_TEST_LOG=1
 Test levels, the steps of the end-to-end test and which tests check each spec scenario are described in [docs/testing.md](docs/testing.md) (in Russian).
 
 How to make a release is described in [docs/releasing.md](docs/releasing.md) (in Russian).
+
+## License
+
+MIT, see [LICENSE](LICENSE).

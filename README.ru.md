@@ -153,3 +153,7 @@ cd web && METAGIT_API_URL=http://localhost:9000 npm run dev
 Уровни тестов, шаги сквозного теста и то, какие тесты проверяют каждый сценарий спецификаций, описаны в [docs/testing.md](docs/testing.md).
 
 Как выпустить релиз, описано в [docs/releasing.md](docs/releasing.md).
+
+## Лицензия
+
+MIT, см. [LICENSE](LICENSE).
