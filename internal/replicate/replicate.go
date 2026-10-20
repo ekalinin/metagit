@@ -488,6 +488,10 @@ func (u *run) reconcile(ctx context.Context) error {
 			ops = append(ops, op{ref: ref, expect: known[ref]})
 		}
 	}
+	if len(ops) == 0 {
+		// Nothing to push: wrong credentials must not look synced.
+		return u.checkAccess(ctx)
+	}
 
 	var failures []string
 	var details string
@@ -579,6 +583,25 @@ func (u *run) push(ctx context.Context, ops []op) (map[string]refResult, string,
 		return nil, "", gitError(err)
 	}
 	return results, string(res.Stderr), nil
+}
+
+// checkRefspec matches no local ref (metagit never creates refs under
+// refs/metagit/check/), so a push with it sends nothing.
+const checkRefspec = "refs/metagit/check/*:refs/metagit/check/*"
+
+// checkAccess connects to the push service of the target (receive-pack)
+// without changing anything there, so it fails when the credentials do not
+// allow pushing. "git ls-remote" is not enough: it talks to upload-pack,
+// which a public repository or a read-only key also answers.
+func (u *run) checkAccess(ctx context.Context) error {
+	res, err := u.remoteGit(ctx, "push", "--dry-run", "--", u.target.URL, checkRefspec)
+	// When the repository on the hosting is empty, git closes an SSH
+	// connection without the final packet and reports a failure, although
+	// the hosting has already accepted the key and sent its (empty) refs.
+	if err != nil && !strings.Contains(string(res.Stderr), "No refs in common") {
+		return gitError(err)
+	}
+	return nil
 }
 
 // diverged handles a ref whose value on the target is not what metagit

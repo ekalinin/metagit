@@ -146,7 +146,10 @@ func TestImportRestoresSettingsAndKeepsHostingsSafe(t *testing.T) {
 		t.Fatalf("github target = %+v", github)
 	}
 
-	// Nothing changes on the hosting until a push arrives.
+	// Nothing changes on the hosting until a push arrives, also when a
+	// delivery runs: with nothing to push it only checks access.
+	apptest.Must(t, dst.App.Core.SyncTarget(ctx, "foo", github.ID))
+	dst.WaitSynced(github.ID)
 	time.Sleep(500 * time.Millisecond)
 	if got := testutil.Git(t, h.Path("foo"), "for-each-ref"); got != hostRefsBefore {
 		t.Fatalf("hosting changed after import:\n%s\nwas:\n%s", got, hostRefsBefore)

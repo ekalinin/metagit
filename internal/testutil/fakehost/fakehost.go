@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -29,6 +30,7 @@ type Host struct {
 
 	srv      *httptest.Server
 	down     atomic.Bool
+	public   atomic.Bool
 	delay    atomic.Int64
 	requests atomic.Int64
 }
@@ -61,6 +63,10 @@ func New(t testing.TB, token string) *Host {
 			http.Error(w, "hosting is down", http.StatusServiceUnavailable)
 			return
 		}
+		if h.public.Load() && (r.URL.Query().Get("service") == "git-upload-pack" || strings.HasSuffix(r.URL.Path, "/git-upload-pack")) {
+			// Reads need no token, as for a public repository.
+			r.SetBasicAuth("anonymous", h.Token)
+		}
 		gh.ServeHTTP(w, r)
 	}))
 	t.Cleanup(h.srv.Close)
@@ -82,6 +88,10 @@ func (h *Host) CreateRepo(t testing.TB, name string) string {
 
 // SetDown makes the host answer 503 to every request.
 func (h *Host) SetDown(down bool) { h.down.Store(down) }
+
+// SetPublic lets anybody fetch from the host without a token, as from a
+// public repository. Pushes still need the token.
+func (h *Host) SetPublic(public bool) { h.public.Store(public) }
 
 // SetDelay delays every request.
 func (h *Host) SetDelay(d time.Duration) { h.delay.Store(int64(d)) }
