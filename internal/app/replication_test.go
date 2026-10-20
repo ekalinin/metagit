@@ -134,6 +134,125 @@ func TestDeliveryWithToken(t *testing.T) {
 	}
 }
 
+// Scenario "Временная ошибка хостинга" (mirror-replication) when there is
+// nothing to push: a wrong token is still an error, also for a public
+// repository that answers reads without the token.
+func TestNothingToPushChecksToken(t *testing.T) {
+	e := apptest.Start(t, apptest.Options{})
+	e.CreateProject("foo")
+	h := fakehost.New(t, hostToken)
+	h.CreateRepo(t, "foo")
+	h.SetPublic(true)
+	other := testutil.InitWork(t)
+	testutil.Commit(t, other, "pr")
+	pushToHost(t, h, other, "main:refs/heads/pr-branch")
+	hostRefs := testutil.Git(t, h.Path("foo"), "for-each-ref")
+
+	tg := e.AddTarget("foo", "github", h.URL("foo"), "wrong-token", true)
+	got := e.WaitTarget(tg.ID, "several attempts", func(t *store.Target) bool { return t.State == store.StateError && t.Attempt >= 2 })
+	if !strings.Contains(got.LastError, "Authentication failed") || strings.Contains(got.LastError, "wrong-token") || got.NextAttemptAt.IsZero() {
+		t.Fatalf("status of the empty project: %+v", got.TargetStatus)
+	}
+	var errorEvents int
+	for _, ev := range e.Events("foo") {
+		if ev.Kind == store.EventDeliveryError {
+			errorEvents++
+		}
+	}
+	if errorEvents != 1 {
+		t.Fatalf("delivery error events = %d", errorEvents)
+	}
+
+	update := func(token string) {
+		t.Helper()
+		_, err := e.App.Core.UpdateTarget(context.Background(), "foo", tg.ID, core.TargetInput{
+			Name: "github", URL: h.URL("foo"), AuthKind: store.AuthHTTPS, Username: "x", Secret: &token, Enabled: true,
+		})
+		apptest.Must(t, err)
+	}
+	update(hostToken)
+	e.WaitSynced(tg.ID)
+	if got := testutil.Git(t, h.Path("foo"), "for-each-ref"); got != hostRefs {
+		t.Fatalf("hosting changed:\n%s\nwas:\n%s", got, hostRefs)
+	}
+
+	// Everything is delivered, then the token becomes wrong.
+	work := testutil.InitWork(t)
+	testutil.Commit(t, work, "a")
+	e.Push(work, "foo", "main")
+	e.WaitSynced(tg.ID)
+	update("wrong-token")
+	got = e.WaitTarget(tg.ID, "error", func(t *store.Target) bool { return t.State == store.StateError })
+	if !strings.Contains(got.LastError, "Authentication failed") {
+		t.Fatalf("error = %q", got.LastError)
+	}
+}
+
+// Scenario "Временная ошибка хостинга" (mirror-replication) over SSH when
+// there is nothing to push: an unknown key and a read-only key are errors.
+func TestNothingToPushChecksSSHKey(t *testing.T) {
+	e := apptest.Start(t, apptest.Options{})
+	e.CreateProject("foo")
+
+	// An SSH hosting with an empty repository. While the read-only file
+	// exists, it refuses to receive pushes, as hostings do for read-only keys.
+	dir := t.TempDir()
+	testutil.Git(t, dir, "init", "-q", "--bare", "-b", "main", filepath.Join(dir, "foo.git"))
+	readOnly := filepath.Join(dir, "read-only")
+	gitWrapper := filepath.Join(dir, "git-wrapper")
+	script := "#!/bin/sh\nif [ \"$1\" = receive-pack ] && [ -e " + readOnly + " ]; then\n" +
+		"\techo 'ERROR: The key you are authenticating with has been marked as read only.' >&2\n\texit 1\nfi\nexec git \"$@\"\n"
+	apptest.Must(t, os.WriteFile(gitWrapper, []byte(script), 0o755))
+	newKey := func() (string, ssh.PublicKey) {
+		_, priv, _ := ed25519.GenerateKey(rand.Reader)
+		block, _ := ssh.MarshalPrivateKey(priv, "")
+		signer, _ := ssh.NewSignerFromKey(priv)
+		return string(pem.EncodeToMemory(block)), signer.PublicKey()
+	}
+	deployKey, deployPub := newKey()
+	unknownKey, _ := newKey()
+	hostKey, err := gitssh.LoadOrCreateHostKey(filepath.Join(dir, "host_key"))
+	apptest.Must(t, err)
+	srv := &gitssh.Server{
+		ReposDir: dir,
+		Git:      gitWrapper,
+		HostKey:  hostKey,
+		CheckKey: func(_ context.Context, k ssh.PublicKey) bool {
+			return string(k.Marshal()) == string(deployPub.Marshal())
+		},
+		ProjectExists: func(context.Context, string) bool { return true },
+		Pushes:        noPushes{},
+		Log:           slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	apptest.Must(t, err)
+	go srv.Serve(l)
+	t.Cleanup(func() { srv.Close() })
+
+	ctx := context.Background()
+	input := func(key string) core.TargetInput {
+		return core.TargetInput{Name: "ssh-host", URL: "ssh://git@" + l.Addr().String() + "/foo.git", AuthKind: store.AuthSSH, Secret: &key, Enabled: true}
+	}
+	failedWith := func(text string) func(*store.Target) bool {
+		return func(t *store.Target) bool { return t.State == store.StateError && strings.Contains(t.LastError, text) }
+	}
+	tg, err := e.App.Core.AddTarget(ctx, "foo", input(unknownKey))
+	apptest.Must(t, err)
+	e.WaitTarget(tg.ID, "unknown key error", failedWith("Permission denied"))
+
+	apptest.Must(t, os.WriteFile(readOnly, nil, 0o600))
+	_, err = e.App.Core.UpdateTarget(ctx, "foo", tg.ID, input(deployKey))
+	apptest.Must(t, err)
+	e.WaitTarget(tg.ID, "read-only key error", failedWith("marked as read only"))
+
+	apptest.Must(t, os.Remove(readOnly))
+	apptest.Must(t, e.App.Core.SyncTarget(ctx, "foo", tg.ID))
+	e.WaitSynced(tg.ID)
+	if refs := testutil.Git(t, filepath.Join(dir, "foo.git"), "for-each-ref"); refs != "" {
+		t.Fatalf("refs created on the hosting:\n%s", refs)
+	}
+}
+
 // SSH targets use a temporary key file that is removed after delivery.
 func TestSSHDeliveryRemovesKeyFile(t *testing.T) {
 	e := apptest.Start(t, apptest.Options{})

@@ -75,7 +75,7 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
 | Merge в веб-интерфейсе хостинга | `app`: `TestDivergedTargetIsArchivedAndOverwritten`; `api`: `TestStatusEventsAndArchiveAPI`; `e2e`: `TestEndToEnd` |
 | Совпадающая ветка с таким же именем | `app`: `TestMatchingOrBehindRefsAreNotDivergence` |
 | Ветка на хостинге отстает | `app`: `TestMatchingOrBehindRefsAreNotDivergence` |
-| Временная ошибка хостинга | `app`: `TestRetriesUntilHostIsBack`, `TestDeliveryWithToken` |
+| Временная ошибка хостинга | `app`: `TestRetriesUntilHostIsBack`, `TestDeliveryWithToken`, `TestNothingToPushChecksToken`, `TestNothingToPushChecksSSHKey` |
 | Хостинг снова доступен | `app`: `TestRetriesUntilHostIsBack` |
 | Все target'ы ответили быстро | `app`: `TestPushOutputShowsDeliveryStatus` |
 | Медленный target | `app`: `TestPushOutputShowsDeliveryStatus` |
