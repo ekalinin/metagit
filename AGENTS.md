@@ -22,7 +22,7 @@ metagit is a self-hosted service that looks like an ordinary git remote: it keep
 
 ## Commands
 
-Requirements: Go 1.26+, Node.js 24+, git 2.30+ and the OpenSSH client. The service checks git and ssh on start, so tests need them too.
+Requirements: Go 1.26+, Node.js 24+, git 2.32+ and the OpenSSH client. The service checks git and ssh on start, so tests need them too.
 
 ```sh
 make build                                    # web console, then bin/metagit
@@ -32,7 +32,7 @@ go test -race ./...
 METAGIT_TEST_LOG=1 go test ./internal/app/    # with the service log
 ```
 
-`make go` builds only the binary; without `make web` before it, the binary serves a "web interface is not built" page. Web dev mode against a running `metagit serve`: README.md, "Development". CI runs `make lint`, `make build`, `make test`.
+`make go` builds only the binary; without `make web` before it, the binary serves a "web interface is not built" page. Web dev mode against a running `metagit serve`: README.md, "Development". CI runs `make lint`, `make build`, `make test`, and the Go tests again with git 2.32 built from source.
 
 ## Testing
 

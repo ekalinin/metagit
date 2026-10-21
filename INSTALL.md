@@ -5,7 +5,7 @@ English | [Русский](INSTALL.ru.md)
 ## Requirements
 
 - Linux or macOS.
-- `git` 2.30 or newer and the OpenSSH client (`ssh`) on the server.
+- `git` 2.32 or newer and the OpenSSH client (`ssh`) on the server.
 - Only for building from source: Go 1.26 or newer, Node.js 24 or newer.
 
 ## Installing a ready binary
