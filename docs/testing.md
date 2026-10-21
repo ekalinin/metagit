@@ -86,6 +86,7 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
 | Хостинг снова доступен | `app`: `TestRetriesUntilHostIsBack` |
 | Все target'ы ответили быстро | `app`: `TestPushOutputShowsDeliveryStatus` |
 | Медленный target | `app`: `TestPushOutputShowsDeliveryStatus` |
+| Ошибка доставки в выводе push | `app`: `TestPushOutputShowsDeliveryStatus` |
 | Просмотр target'а | `api`: `TestTargetsAPI`; `pages/TargetForm.test.tsx`: "on edit the stored secret is never shown and an empty field keeps it" |
 | Ошибка доставки с токеном в URL запроса | `app`: `TestSecretsAreMaskedInErrors`; `secrets`: `TestMask` |
 

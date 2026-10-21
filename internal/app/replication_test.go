@@ -553,8 +553,8 @@ func TestManualSyncDoesNotWaitForRetry(t *testing.T) {
 	e.WaitSynced(tg.ID)
 }
 
-// Scenarios "Все target'ы ответили быстро" and "Медленный target"
-// (mirror-replication).
+// Scenarios "Все target'ы ответили быстро", "Медленный target" and "Ошибка
+// доставки в выводе push" (mirror-replication).
 func TestPushOutputShowsDeliveryStatus(t *testing.T) {
 	e := apptest.Start(t, apptest.Options{PushStatusTimeout: 1500 * time.Millisecond})
 	e.CreateProject("foo")
@@ -580,6 +580,10 @@ func TestPushOutputShowsDeliveryStatus(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("push output has no %q:\n%s", want, out)
 		}
+	}
+	// The error line has a short error text and the retry mark.
+	if !regexp.MustCompile(`(?m)metagit: broken: error: \S.* \(retry later\)[ \t]*$`).MatchString(out) {
+		t.Errorf("push output has no error line with %q for broken:\n%s", "(retry later)", out)
 	}
 	if elapsed > 4*time.Second {
 		t.Errorf("push waited %v, the timeout is 1.5s", elapsed)
