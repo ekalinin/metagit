@@ -23,3 +23,39 @@ jobs:
       - run: make lint
       - run: make build
       - run: make test
+
+  # Go tests with the oldest supported git (gitcmd.MinGitVersion). Runner
+  # images do not ship it, so it is built from source once and cached. The
+  # image is pinned so that the cached build matches its system libraries.
+  test-min-git:
+    runs-on: ubuntu-24.04
+    env:
+      GIT_VERSION: 2.32.7
+      GIT_SHA256: f09904d13a9bfca5fcb228c3caba1d4c17426dec0000bf67672af257b8a73db4
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - id: git-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/git-${{ env.GIT_VERSION }}
+          key: git-${{ env.GIT_VERSION }}-ubuntu-24.04-${{ runner.arch }}
+      - name: Build git ${{ env.GIT_VERSION }}
+        if: steps.git-cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev libexpat1-dev libssl-dev zlib1g-dev
+          curl -fsSLo git.tar.gz "https://mirrors.edge.kernel.org/pub/software/scm/git/git-$GIT_VERSION.tar.gz"
+          echo "$GIT_SHA256  git.tar.gz" | sha256sum -c -
+          tar xzf git.tar.gz
+          make -C "git-$GIT_VERSION" -j"$(nproc)" prefix="$HOME/git-$GIT_VERSION" \
+            NO_GETTEXT=1 NO_TCLTK=1 NO_PERL=1 NO_PYTHON=1 install
+      - run: echo "$HOME/git-$GIT_VERSION/bin" >> "$GITHUB_PATH"
+      - name: Check git and ssh versions
+        run: |
+          git --version && ssh -V
+          test "$(git --version)" = "git version $GIT_VERSION"
+      - run: go test ./...
