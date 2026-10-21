@@ -22,7 +22,7 @@ metagit is a self-hosted service that looks like an ordinary git remote: it keep
 
 ## Commands
 
-Requirements: Go 1.26+, Node.js 24+, git 2.30+ and the OpenSSH client. The service checks git and ssh on start, so tests need them too.
+Requirements: Go 1.26+, Node.js 24+, git 2.32+ and the OpenSSH client. The service checks git and ssh on start, so tests need them too.
 
 ```sh
 make build                                    # web console, then bin/metagit

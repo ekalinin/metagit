@@ -137,6 +137,17 @@ func TestCheckToolsWithoutGit(t *testing.T) {
 	}
 }
 
+func TestCheckToolsOldGit(t *testing.T) {
+	git := filepath.Join(t.TempDir(), "git")
+	if err := os.WriteFile(git, []byte("#!/bin/sh\necho git version 2.31.8\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := CheckTools(t.Context(), git, "ssh")
+	if err == nil || !strings.Contains(err.Error(), "git version 2.31.8 is too old: metagit needs git 2.32 or newer") {
+		t.Fatalf("expected too old error, got %v", err)
+	}
+}
+
 func TestParseGitVersion(t *testing.T) {
 	cases := map[string][2]int{
 		"git version 2.55.0":                 {2, 55},

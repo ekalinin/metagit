@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-// MinGitVersion is the oldest git release metagit relies on.
-var MinGitVersion = [2]int{2, 30}
+// MinGitVersion is the oldest git release metagit relies on. Older git
+// ignores GIT_CONFIG_GLOBAL and reads the user config of the service user.
+var MinGitVersion = [2]int{2, 32}
 
 // CheckTools verifies that git (of a supported version) and the ssh client
 // are installed. It returns the git version on success.
