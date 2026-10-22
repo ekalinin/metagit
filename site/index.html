@@ -97,7 +97,7 @@ remote: metagit: bitbucket: error: fatal: Authentication failed ... (retry later
 
         <dt>Notifications</dt>
         <dd>
-          <p>The status of every target and the event log are in the web console.</p>
+          <p>The status of every target and the event log are in the web console. A command of your choice runs on delivery errors and recovery, deliveries, divergences and destructive pushes; there are ready scripts for a webhook, Telegram and email.</p>
         </dd>
       </dl>
     </section>
@@ -171,7 +171,7 @@ git push metagit main</code></pre>
       <h2 id="security-title">Security</h2>
       <ul>
         <li>Run metagit as a separate system user: hosting credentials are passed to child git processes through the environment.</li>
-        <li>Target credentials are stored encrypted (AES-256-GCM) and are not shown in the web console, logs or push output.</li>
+        <li>Target credentials are stored encrypted (AES-256-GCM) and are not shown in the web console, logs, push output or notifications.</li>
         <li>The owner password is stored as an argon2id hash, sign-in attempts are rate limited.</li>
         <li>The SSH server accepts only the owner's keys and runs only <code>git-upload-pack</code> and <code>git-receive-pack</code>.</li>
       </ul>
@@ -185,7 +185,6 @@ git push metagit main</code></pre>
         <li>Two-way sync.</li>
         <li>Creating repositories on hostings through their API.</li>
         <li>Sending archived refs to hostings.</li>
-        <li>Notifications outside the web console.</li>
       </ul>
     </section>
   </main>

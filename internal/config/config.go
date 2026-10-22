@@ -27,6 +27,7 @@ type Config struct {
 	PushStatusTimeout     time.Duration
 	MaxParallelDeliveries int
 	GitTimeout            time.Duration
+	NotifyCommand         string
 }
 
 // Default values of the settings.
@@ -58,6 +59,7 @@ func Load(args []string, getenv func(string) string, output io.Writer) (*Config,
 	b.dur(&cfg.PushStatusTimeout, "push-status-timeout", "METAGIT_PUSH_STATUS_TIMEOUT", DefaultPushStatusTimeout, "how long a push waits for delivery results")
 	b.int(&cfg.MaxParallelDeliveries, "max-parallel-deliveries", "METAGIT_MAX_PARALLEL_DELIVERIES", DefaultMaxParallelDeliveries, "maximum number of simultaneous deliveries")
 	b.dur(&cfg.GitTimeout, "git-timeout", "METAGIT_GIT_TIMEOUT", DefaultGitTimeout, "timeout of a single git operation with a hosting")
+	b.str(&cfg.NotifyCommand, "notify-command", "METAGIT_NOTIFY_COMMAND", "", "executable run on delivery and archive events; the event is passed on stdin and in METAGIT_* variables")
 	if b.err != nil {
 		return nil, b.err
 	}

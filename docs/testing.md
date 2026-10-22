@@ -12,7 +12,7 @@ METAGIT_TEST_LOG=1 go test ./internal/app/   # с журналом сервис�
 
 | Уровень | Где | Что используется |
 |---|---|---|
-| Модульные | пакеты `internal/*` | отдельные функции и типы |
+| Модульные | пакеты `internal/*`, `examples/notify` | отдельные функции и типы; скрипты уведомлений с подставными `curl` и `sendmail` |
 | Интеграционные | `internal/app`, `internal/api`, `internal/transfer` | настоящий git, собранный бинарник metagit для хуков, сервис внутри процесса теста (`internal/apptest`), тестовый HTTPS-хостинг с `git http-backend` (`internal/testutil/fakehost`) |
 | Сквозной | `internal/e2e` | `metagit serve` отдельным процессом, CLI, API и git, два SSH-хостинга |
 | Веб | `web/src/**/*.test.ts(x)` | компонентные тесты (Vitest, jsdom, Testing Library), `fetch` подменен |
@@ -89,7 +89,7 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
 | Медленный target | `app`: `TestPushOutputShowsDeliveryStatus` |
 | Ошибка доставки в выводе push | `app`: `TestPushOutputShowsDeliveryStatus` |
 | Просмотр target'а | `api`: `TestTargetsAPI`; `pages/TargetForm.test.tsx`: "on edit the stored secret is never shown and an empty field keeps it" |
-| Ошибка доставки с токеном в URL запроса | `app`: `TestSecretsAreMaskedInErrors`; `secrets`: `TestMask` |
+| Ошибка доставки с токеном в URL запроса | `app`: `TestSecretsAreMaskedInErrors`, `TestNotifyMasksSecrets`; `secrets`: `TestMask` |
 
 ### ref-archive
 
@@ -187,6 +187,24 @@ SSH-хостинги выбраны потому, что `metagit serve` уби�
 | Старый бинарник после обновления | `store`: `TestNewerSchemaIsRejected`; `cli`: `TestServeOnNewerDatabase` |
 | Создание владельца на новой базе | `cli`: `TestOwnerCreateOnNewerDatabase` |
 | Обновление | `store`: `TestMigrationsCreateTables`, `TestReopenDoesNotReapplyMigrations` |
+
+### notifications
+
+| Сценарий | Проверка |
+|---|---|
+| Без настройки | `app`: тесты без `apptest.Options.NotifyCommand` |
+| Неверный путь | `app`: `TestNotifyCommandMustBeExecutable`; `notify`: `TestCheck` |
+| Ошибка доставки | `app`: `TestNotifyDeliveryErrorAndRecovery` |
+| Восстановление | `app`: `TestNotifyDeliveryErrorAndRecovery`; `notify`: `TestNotifierPassesEventsInOrder` |
+| Нечего доставлять | `app`: `TestNotifyDeliveryErrorAndRecovery` |
+| Расхождение | `app`: `TestNotifyDiverged` |
+| Force push в ветку | `app`: `TestNotifyArchivePush` |
+| Данные доставки | `app`: `TestNotifyDeliveryErrorAndRecovery`; `notify`: `TestEventJSON`, `TestCommandEnv`, `TestLongValuesAreCut` |
+| Медленная команда | `notify`: `TestNotifierKillsSlowCommand`; `app`: `TestNotifyDoesNotDelayPush` |
+| Команда завершилась ошибкой | `notify`: `TestNotifierCommandFails` |
+| Ключ не передается | `app`: `TestNotifyDeliveryErrorAndRecovery`; `notify`: `TestCommandEnv`, `TestNotifierPassesEventsInOrder` |
+
+Очередь и остановка (`Запуск команды`) - `notify`: `TestNotifierQueueAndStop`. Скрипты из `examples/notify/` - `examples/notify`: `TestScriptsParse`, `TestWebhook`, `TestTelegram`, `TestEmail`.
 
 ## Разовые проверки вне `make test`
 

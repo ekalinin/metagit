@@ -27,6 +27,7 @@ import (
 	"github.com/ekalinin/metagit/internal/githttp"
 	"github.com/ekalinin/metagit/internal/gitssh"
 	"github.com/ekalinin/metagit/internal/hooks"
+	"github.com/ekalinin/metagit/internal/notify"
 	"github.com/ekalinin/metagit/internal/replicate"
 	"github.com/ekalinin/metagit/internal/repo"
 	"github.com/ekalinin/metagit/internal/secrets"
@@ -75,6 +76,8 @@ type App struct {
 	sockDir string
 	hostKey ssh.Signer
 	webFS   fs.FS
+
+	notifier *notify.Notifier // nil when notifications are off
 }
 
 // New prepares the data directory and starts background parts (hook API,
@@ -84,6 +87,12 @@ func New(ctx context.Context, o Options) (_ *App, err error) {
 	log := cmp.Or(o.Log, slog.Default())
 	if _, err := gitcmd.CheckTools(ctx, "git", "ssh"); err != nil {
 		return nil, err
+	}
+	var notifyCommand string
+	if cfg.NotifyCommand != "" {
+		if notifyCommand, err = notify.Check(cfg.NotifyCommand); err != nil {
+			return nil, err
+		}
 	}
 
 	dataDir, err := filepath.Abs(cfg.DataDir)
@@ -148,7 +157,12 @@ func New(ctx context.Context, o Options) (_ *App, err error) {
 	if err := a.configureRepos(ctx); err != nil {
 		return nil, err
 	}
-	arch := &archive.Service{Store: a.Store, Repos: a.Repos, Git: &gitcmd.Runner{Timeout: time.Minute}, Log: log}
+	if notifyCommand != "" {
+		// Started before archive recovery, which also sends events.
+		a.notifier = notify.New(notifyCommand, log)
+		a.notifier.Start()
+	}
+	arch := &archive.Service{Store: a.Store, Repos: a.Repos, Git: &gitcmd.Runner{Timeout: time.Minute}, Log: log, Notifier: a.notifier}
 	a.Replicator = replicate.New(a.Store, a.Repos, box, arch, replicate.Options{
 		MaxParallel: cfg.MaxParallelDeliveries,
 		GitTimeout:  cfg.GitTimeout,
@@ -158,6 +172,7 @@ func New(ctx context.Context, o Options) (_ *App, err error) {
 		TmpDir:      tmpDir,
 		KnownHosts:  filepath.Join(dataDir, KnownHostsFile),
 		ExtraEnv:    o.ExtraGitEnv,
+		Notifier:    a.notifier,
 	}, log)
 	a.Core = &core.Service{
 		Store:             a.Store,
@@ -312,6 +327,7 @@ func (a *App) Close() {
 	if a.hooks != nil {
 		_ = a.hooks.Close()
 	}
+	a.notifier.Stop(notify.StopWait)
 	if a.sockDir != "" {
 		_ = os.RemoveAll(a.sockDir)
 	}

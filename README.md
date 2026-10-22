@@ -39,7 +39,7 @@ Why: a project that lives on one hosting can be lost (the account gets blocked, 
 - **Only branches and tags are sent.** Branches and tags on a hosting that metagit did not send there (for example, branches for pull requests) are left alone.
 - **Nothing is lost.** Before a force-push, a branch deletion or a tag move, the previous value is saved in `refs/metagit/archive/push/...`. For protected branches and tags such pushes are rejected.
 - **Divergence on a hosting.** If a branch on a hosting was changed bypassing metagit (for example, a merge in the hosting's web interface), metagit saves the hosting's state in `refs/metagit/archive/targets/<id>/...`, overwrites the branch with its own value using `--force-with-lease` and records an event in the project log.
-- **Notifications** - target status and the event log in the web console.
+- **Notifications** - target status and the event log in the web console. A command of your choice runs on delivery errors and recovery, deliveries, divergences and destructive pushes; there are ready scripts for a webhook, Telegram and email ([INSTALL.md](INSTALL.md#notifications)).
 
 ## Installation
 
@@ -113,13 +113,13 @@ For a backup, it is enough to stop the service and copy the data directory (and 
 ## Security
 
 - Run metagit as a separate system user: hosting credentials are passed to child git processes through the environment.
-- Target credentials are stored encrypted (AES-256-GCM) and are not shown in the web console, logs or push output.
+- Target credentials are stored encrypted (AES-256-GCM) and are not shown in the web console, logs, push output or notifications.
 - The owner password is stored as an argon2id hash, sign-in attempts are rate limited.
 - The SSH server accepts only the owner's keys and runs only `git-upload-pack` and `git-receive-pack`.
 
 ## Not in this version
 
-Git LFS, wiki, releases, issues and pull requests; multiple users; two-way sync; creating repositories on hostings through their API; sending archived refs to hostings; notifications outside the web console.
+Git LFS, wiki, releases, issues and pull requests; multiple users; two-way sync; creating repositories on hostings through their API; sending archived refs to hostings.
 
 ## Development
 

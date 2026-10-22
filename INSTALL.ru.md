@@ -142,6 +142,56 @@ Push, принятые после обновления, останутся то�
 | `--push-status-timeout` | `METAGIT_PUSH_STATUS_TIMEOUT` | `5s` | сколько push ждет результатов доставки |
 | `--max-parallel-deliveries` | `METAGIT_MAX_PARALLEL_DELIVERIES` | `4` | одновременные доставки |
 | `--git-timeout` | `METAGIT_GIT_TIMEOUT` | `10m` | таймаут одной операции с хостингом |
+| `--notify-command` | `METAGIT_NOTIFY_COMMAND` | не задана | исполняемый файл, который запускается на события доставки и архива, см. [Уведомления](#уведомления) |
 | | `METAGIT_SECRET_KEY` | файл `secret.key` | мастер-ключ (base64 или hex, 32 байта) |
 
 Флаг важнее переменной окружения, переменная важнее значения по умолчанию.
+
+## Уведомления
+
+metagit может запускать вашу команду на события доставки и архива, чтобы вы узнавали о сломанном зеркале, не заходя в веб-консоль. Укажите путь к исполняемому файлу в `--notify-command` или `METAGIT_NOTIFY_COMMAND`. metagit запускает его без аргументов и без shell. Если файла нет или он не исполняемый, `metagit serve` не запускается.
+
+| Событие | Когда |
+|---|---|
+| `delivery_error` | доставка на target завершилась ошибкой, и до нее target не был в состоянии "ошибка" или текст ошибки изменился; повторы с той же ошибкой его не повторяют |
+| `recovered` | доставка на target в состоянии "ошибка" прошла успешно |
+| `delivered` | доставка прошла успешно и изменила на target'е хотя бы один ref; доставка, которой нечего отправить, события не дает |
+| `diverged` | ветку или тег на target'е изменили в обход metagit, и их состояние на хостинге сохранено в архив |
+| `archive_push` | разрушающий push в metagit (force push в ветку, удаление ветки, перемещение тега); прежнее состояние ref сохранено в архив |
+
+`recovered` и `delivered` не записываются в журнал событий проекта.
+
+Команда получает событие JSON-объектом на stdin:
+
+```json
+{"event":"delivered","time":"2026-10-21T11:38:01Z","project":"app","target":"github","ref":"","archive_ref":"","refs":["refs/heads/dev","refs/heads/main"],"message":"delivered 2 refs to github"}
+```
+
+и в переменных `METAGIT_EVENT`, `METAGIT_TIME`, `METAGIT_PROJECT`, `METAGIT_TARGET`, `METAGIT_REF`, `METAGIT_ARCHIVE_REF`, `METAGIT_REFS` (refs через пробел) и `METAGIT_MESSAGE`. `target` пустой для `archive_push`; `ref` и `archive_ref` заданы для `diverged` и `archive_push`; `refs` - только для `delivered`. `message` для `delivery_error`, `diverged` и `archive_push` - текст из журнала событий, учетные данные хостингов в нем замаскированы. Переменная длиннее 64 КиБ обрезается, в JSON значения полные.
+
+Команда запускается для одного события за раз, в порядке событий, а push и доставка ее не ждут. Запуск дольше 30 секунд прерывается. Если команда завершилась с ненулевым кодом или была прервана, metagit пишет в лог предупреждение с событием, проектом и первой строкой stderr и больше не запускает ее для этого события: если нужны повторы, делайте их в самой команде. В очереди ждут до 1000 событий, более новые отбрасываются с предупреждением в логе. При остановке сервиса событиям в очереди дается до 5 секунд. События для команды не сохраняются, поэтому событие, потерянное при перезапуске или из-за ошибки команды, повторно не отправляется; ошибки доставки, расхождения и архивы остаются в журнале событий в веб-консоли.
+
+Команда получает окружение `metagit serve` без `METAGIT_SECRET_KEY`, поэтому ее настройки можно положить в тот же `EnvironmentFile`:
+
+```sh
+# /etc/metagit/env
+METAGIT_SECRET_KEY=...
+METAGIT_NOTIFY_COMMAND=/usr/local/lib/metagit/telegram.sh
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF
+TELEGRAM_CHAT_ID=123456789
+```
+
+Готовые скрипты лежат в [`examples/notify/`](examples/notify/):
+
+- `webhook.sh` отправляет JSON на `NOTIFY_WEBHOOK_URL`;
+- `telegram.sh` отправляет `metagit <project> (<target>): <message>` в чат `TELEGRAM_CHAT_ID` через бота `TELEGRAM_BOT_TOKEN`;
+- `email.sh` отправляет письмо на `NOTIFY_EMAIL_TO` через `sendmail` (`NOTIFY_EMAIL_FROM` и `SENDMAIL` необязательны).
+
+`webhook.sh` и `telegram.sh` нужен `curl`, `email.sh` - `sendmail`. В каждом скрипте есть закомментированная строка, которая пропускает `delivered`, если сообщение о каждой доставке - это слишком много. Скриптов нет в архивах релизов, возьмите их из репозитория:
+
+```sh
+sudo install -d /usr/local/lib/metagit
+sudo curl -fsSLo /usr/local/lib/metagit/telegram.sh \
+    https://raw.githubusercontent.com/ekalinin/metagit/main/examples/notify/telegram.sh
+sudo chmod 0755 /usr/local/lib/metagit/telegram.sh
+```
