@@ -21,6 +21,7 @@ import (
 
 	"github.com/ekalinin/metagit/internal/archive"
 	"github.com/ekalinin/metagit/internal/gitcmd"
+	"github.com/ekalinin/metagit/internal/notify"
 	"github.com/ekalinin/metagit/internal/repo"
 	"github.com/ekalinin/metagit/internal/secrets"
 	"github.com/ekalinin/metagit/internal/store"
@@ -68,6 +69,8 @@ type Options struct {
 	MaxRounds int
 	// BatchSize limits refs per git push command.
 	BatchSize int
+	// Notifier gets delivery events; nil when notifications are off.
+	Notifier *notify.Notifier
 }
 
 // Replicator runs one worker per target.
@@ -351,6 +354,8 @@ func (r *Replicator) deliver(ctx context.Context, id int64) Result {
 		if t.State != store.StateError || t.LastError != msg {
 			_ = r.store.AddEvent(ctx, &store.Event{ProjectID: project.ID, TargetID: t.ID, TargetName: t.Name,
 				Kind: store.EventDeliveryError, Message: "delivery error: " + msg})
+			r.opts.Notifier.Notify(notify.Event{Kind: notify.KindDeliveryError, Project: project.Name, Target: t.Name,
+				Message: "delivery error: " + msg})
 		}
 		r.log.Warn("delivery failed", "project", project.Name, "target", t.Name, "attempt", attempt, "err", msg)
 		return res
@@ -362,6 +367,19 @@ func (r *Replicator) deliver(ctx context.Context, id int64) Result {
 	st := store.TargetStatus{State: store.StateSynced, LastSuccessAt: now}
 	if err := r.store.SetTargetStatus(ctx, t.ID, st); err != nil {
 		r.log.Error("cannot save target status", "target", t.ID, "err", err)
+	}
+	if t.State == store.StateError {
+		r.opts.Notifier.Notify(notify.Event{Kind: notify.KindRecovered, Project: project.Name, Target: t.Name,
+			Message: "delivery to " + t.Name + " works again"})
+	}
+	if len(run.changed) > 0 {
+		refs := slices.Compact(slices.Sorted(slices.Values(run.changed)))
+		what := "refs"
+		if len(refs) == 1 {
+			what = "ref"
+		}
+		r.opts.Notifier.Notify(notify.Event{Kind: notify.KindDelivered, Project: project.Name, Target: t.Name, Refs: refs,
+			Message: fmt.Sprintf("delivered %d %s to %s", len(refs), what, t.Name)})
 	}
 	return res
 }
@@ -388,6 +406,8 @@ type run struct {
 	secrets  []string
 	keyFile  string
 	archives []string
+	// changed are refs written or deleted on the target in this run.
+	changed []string
 }
 
 func (u *run) mask(s string) string {
@@ -562,10 +582,16 @@ func remoteDetails(stderr string) string {
 }
 
 func (u *run) record(ctx context.Context, ref, object string) error {
+	var err error
 	if object == "" {
-		return u.r.store.DeleteTargetRef(ctx, u.target.ID, ref)
+		err = u.r.store.DeleteTargetRef(ctx, u.target.ID, ref)
+	} else {
+		err = u.r.store.SetTargetRef(ctx, u.target.ID, ref, object)
 	}
-	return u.r.store.SetTargetRef(ctx, u.target.ID, ref, object)
+	if err == nil {
+		u.changed = append(u.changed, ref)
+	}
+	return err
 }
 
 func (u *run) push(ctx context.Context, ops []op) (map[string]refResult, string, error) {
@@ -647,15 +673,18 @@ func (u *run) diverged(ctx context.Context, o op) (*op, error) {
 	if o.object == "" {
 		action = "is deleted, as in metagit"
 	}
+	msg := fmt.Sprintf("%s %s on target %s diverged from metagit: hosting state %s saved in %s, ref %s",
+		what, o.ref, u.target.Name, short(fetched), name, action)
 	err = u.r.store.AddEvent(ctx, &store.Event{
 		ProjectID: u.project.ID, TargetID: u.target.ID, TargetName: u.target.Name,
 		Kind: store.EventDiverged, Ref: o.ref, ArchiveRef: name,
-		Message: fmt.Sprintf("%s %s on target %s diverged from metagit: hosting state %s saved in %s, ref %s",
-			what, o.ref, u.target.Name, short(fetched), name, action),
+		Message: msg,
 	})
 	if err != nil {
 		return nil, err
 	}
+	u.r.opts.Notifier.Notify(notify.Event{Kind: notify.KindDiverged, Project: u.project.Name, Target: u.target.Name,
+		Ref: o.ref, ArchiveRef: name, Message: msg})
 	return &op{ref: o.ref, object: o.object, expect: fetched}, nil
 }
 

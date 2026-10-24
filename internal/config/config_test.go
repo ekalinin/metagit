@@ -38,6 +38,9 @@ func TestDefaults(t *testing.T) {
 	if len(cfg.TrustedProxies) != 0 {
 		t.Errorf("trusted proxies = %v", cfg.TrustedProxies)
 	}
+	if cfg.NotifyCommand != "" {
+		t.Errorf("notify command = %q", cfg.NotifyCommand)
+	}
 }
 
 func TestEnvironmentOverridesDefault(t *testing.T) {
@@ -45,25 +48,27 @@ func TestEnvironmentOverridesDefault(t *testing.T) {
 		"METAGIT_DATA_DIR":                "/srv/metagit",
 		"METAGIT_PUSH_STATUS_TIMEOUT":     "2s",
 		"METAGIT_MAX_PARALLEL_DELIVERIES": "8",
+		"METAGIT_NOTIFY_COMMAND":          "/etc/metagit/notify.sh",
 	}), io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.DataDir != "/srv/metagit" || cfg.PushStatusTimeout != 2*time.Second || cfg.MaxParallelDeliveries != 8 {
+	if cfg.DataDir != "/srv/metagit" || cfg.PushStatusTimeout != 2*time.Second || cfg.MaxParallelDeliveries != 8 ||
+		cfg.NotifyCommand != "/etc/metagit/notify.sh" {
 		t.Errorf("environment ignored: %+v", cfg)
 	}
 }
 
 func TestFlagOverridesEnvironment(t *testing.T) {
 	cfg, err := Load(
-		[]string{"--data-dir", "/flag", "--push-status-timeout", "1s", "--http-addr", "127.0.0.1:9000"},
-		env(map[string]string{"METAGIT_DATA_DIR": "/env", "METAGIT_PUSH_STATUS_TIMEOUT": "2s"}),
+		[]string{"--data-dir", "/flag", "--push-status-timeout", "1s", "--http-addr", "127.0.0.1:9000", "--notify-command", "/flag/notify.sh"},
+		env(map[string]string{"METAGIT_DATA_DIR": "/env", "METAGIT_PUSH_STATUS_TIMEOUT": "2s", "METAGIT_NOTIFY_COMMAND": "/env/notify.sh"}),
 		io.Discard,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.DataDir != "/flag" || cfg.PushStatusTimeout != time.Second {
+	if cfg.DataDir != "/flag" || cfg.PushStatusTimeout != time.Second || cfg.NotifyCommand != "/flag/notify.sh" {
 		t.Errorf("flag did not win: %+v", cfg)
 	}
 	if cfg.BaseURL != "http://127.0.0.1:9000" {

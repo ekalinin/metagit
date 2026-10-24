@@ -14,6 +14,7 @@ import (
 
 	"github.com/ekalinin/metagit/internal/gitcmd"
 	"github.com/ekalinin/metagit/internal/hooks"
+	"github.com/ekalinin/metagit/internal/notify"
 	"github.com/ekalinin/metagit/internal/repo"
 	"github.com/ekalinin/metagit/internal/store"
 )
@@ -105,6 +106,8 @@ type Service struct {
 	Git   *gitcmd.Runner
 	Log   *slog.Logger
 	Now   func() time.Time
+	// Notifier gets archive_push events; nil when notifications are off.
+	Notifier *notify.Notifier
 }
 
 func (s *Service) now() time.Time {
@@ -203,6 +206,7 @@ func (s *Service) finish(ctx context.Context, project *store.Project, intents []
 			return archived, fmt.Errorf("archive %s: %w", in.Ref, err)
 		}
 		a := store.ArchiveRef{ProjectID: project.ID, Source: store.SourcePush, OrigRef: in.Ref, ArchiveRef: name, Object: in.OldObject, CreatedAt: in.CreatedAt}
+		msg := fmt.Sprintf("%s: previous state %s saved in %s", in.Ref, short(in.OldObject), name)
 		err = s.Store.WithTx(ctx, func(tx *store.Store) error {
 			if err := tx.AddArchiveRef(ctx, &a); err != nil {
 				return err
@@ -212,7 +216,7 @@ func (s *Service) finish(ctx context.Context, project *store.Project, intents []
 				Kind:       store.EventArchivePush,
 				Ref:        in.Ref,
 				ArchiveRef: name,
-				Message:    fmt.Sprintf("%s: previous state %s saved in %s", in.Ref, short(in.OldObject), name),
+				Message:    msg,
 			})
 			if err != nil {
 				return err
@@ -222,6 +226,7 @@ func (s *Service) finish(ctx context.Context, project *store.Project, intents []
 		if err != nil {
 			return archived, err
 		}
+		s.Notifier.Notify(notify.Event{Kind: notify.KindArchivePush, Project: project.Name, Ref: in.Ref, ArchiveRef: name, Message: msg})
 		archived = append(archived, a)
 	}
 	return archived, nil

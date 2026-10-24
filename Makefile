@@ -27,7 +27,7 @@ test-web: web/node_modules
 	cd web && $(NPM) test
 
 lint: web/node_modules
-	@unformatted="$$(gofmt -l cmd internal)"; \
+	@unformatted="$$(gofmt -l cmd internal examples)"; \
 	if [ -n "$$unformatted" ]; then echo "gofmt needed:"; echo "$$unformatted"; exit 1; fi
 	$(GO) vet ./...
 	cd web && $(NPM) run typecheck

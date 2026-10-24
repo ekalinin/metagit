@@ -51,6 +51,8 @@ type Options struct {
 	NoOwner bool
 	// TrustedProxies are reverse proxies whose X-Forwarded-For is used.
 	TrustedProxies []netip.Prefix
+	// NotifyCommand is the notification command (--notify-command).
+	NotifyCommand string
 }
 
 // Env is a running instance.
@@ -90,6 +92,7 @@ func Start(t testing.TB, o Options) *Env {
 		PushStatusTimeout:     cmp.Or(o.PushStatusTimeout, 5*time.Second),
 		MaxParallelDeliveries: 4,
 		GitTimeout:            time.Minute,
+		NotifyCommand:         o.NotifyCommand,
 	}
 	var logOut io.Writer = io.Discard
 	if os.Getenv("METAGIT_TEST_LOG") != "" {

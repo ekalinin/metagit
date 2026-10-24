@@ -17,6 +17,7 @@ metagit is a self-hosted service that looks like an ordinary git remote: it keep
   - `apptest`, `testutil`, `e2e` - test helpers and the end-to-end test.
 - `web/` - web console (React, Vite, Vitest). The build goes to `internal/webui/dist/app/` (git-ignored), which the binary embeds. `web/go.mod` keeps `node_modules` out of the Go module.
 - `site/` - static English landing for GitHub Pages; preview with `python3 -m http.server -d site`.
+- `examples/notify/` - notification command scripts (webhook, Telegram, email) and their test.
 - `openspec/` - specs and changes, see below.
 - `docs/` - `testing.md`, `releasing.md`, `web-interface.md` (screenshots), `explore/` (early idea notes).
 
@@ -27,7 +28,7 @@ Requirements: Go 1.26+, Node.js 24+, git 2.32+ and the OpenSSH client. The servi
 ```sh
 make build                                    # web console, then bin/metagit
 make test                                     # Go and web tests
-make lint                                     # gofmt on cmd and internal, go vet, TypeScript type check
+make lint                                     # gofmt on cmd, internal and examples, go vet, TypeScript type check
 go test -race ./...
 METAGIT_TEST_LOG=1 go test ./internal/app/    # with the service log
 ```

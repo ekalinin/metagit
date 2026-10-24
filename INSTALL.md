@@ -142,6 +142,56 @@ Pushes accepted after the update remain only in `/var/lib/metagit.failed`, they 
 | `--push-status-timeout` | `METAGIT_PUSH_STATUS_TIMEOUT` | `5s` | how long a push waits for delivery results |
 | `--max-parallel-deliveries` | `METAGIT_MAX_PARALLEL_DELIVERIES` | `4` | simultaneous deliveries |
 | `--git-timeout` | `METAGIT_GIT_TIMEOUT` | `10m` | timeout of one operation with a hosting |
+| `--notify-command` | `METAGIT_NOTIFY_COMMAND` | not set | executable run on delivery and archive events, see [Notifications](#notifications) |
 | | `METAGIT_SECRET_KEY` | the `secret.key` file | master key (base64 or hex, 32 bytes) |
 
 A flag takes precedence over the environment variable, and the variable over the default.
+
+## Notifications
+
+metagit can run a command of your choice on delivery and archive events, so you learn about a broken mirror without opening the web console. Put the path to an executable file in `--notify-command` or `METAGIT_NOTIFY_COMMAND`. metagit runs it without arguments and without a shell. If the file does not exist or is not executable, `metagit serve` does not start.
+
+| Event | When |
+|---|---|
+| `delivery_error` | a delivery to a target failed, and the target was not in the error state before or the error text changed; retries with the same error do not repeat it |
+| `recovered` | a delivery to a target in the error state succeeded |
+| `delivered` | a delivery succeeded and changed at least one ref on the target; a delivery with nothing to send gives no event |
+| `diverged` | a branch or tag on a target was changed bypassing metagit, and its state on the hosting was saved in the archive |
+| `archive_push` | a destructive push to metagit (force push to a branch, branch deletion, tag move); the previous state of the ref was saved in the archive |
+
+`recovered` and `delivered` are not written to the project event log.
+
+The command gets the event as a JSON object on stdin:
+
+```json
+{"event":"delivered","time":"2026-10-21T11:38:01Z","project":"app","target":"github","ref":"","archive_ref":"","refs":["refs/heads/dev","refs/heads/main"],"message":"delivered 2 refs to github"}
+```
+
+and in the variables `METAGIT_EVENT`, `METAGIT_TIME`, `METAGIT_PROJECT`, `METAGIT_TARGET`, `METAGIT_REF`, `METAGIT_ARCHIVE_REF`, `METAGIT_REFS` (refs separated by spaces) and `METAGIT_MESSAGE`. `target` is empty for `archive_push`; `ref` and `archive_ref` are set for `diverged` and `archive_push`; `refs` only for `delivered`. `message` is the text of the event log for `delivery_error`, `diverged` and `archive_push`, with hosting credentials masked. A variable longer than 64 KiB is cut; the JSON has the full values.
+
+The command runs for one event at a time, in the order of events, and pushes and deliveries do not wait for it. A run longer than 30 seconds is stopped. If the command exits with a non-zero code or is stopped, metagit logs a warning with the event, the project and the first line of stderr, and does not run it again for this event: retry inside the command if needed. Up to 1000 events wait in the queue, newer ones are dropped with a warning in the log. When the service stops, queued events get up to 5 seconds. Events are not stored for the command, so an event lost on a restart or a failed command is not sent again; delivery errors, divergences and archives stay in the event log in the web console.
+
+The command gets the environment of `metagit serve` without `METAGIT_SECRET_KEY`, so its settings can go to the same `EnvironmentFile`:
+
+```sh
+# /etc/metagit/env
+METAGIT_SECRET_KEY=...
+METAGIT_NOTIFY_COMMAND=/usr/local/lib/metagit/telegram.sh
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF
+TELEGRAM_CHAT_ID=123456789
+```
+
+Ready scripts are in [`examples/notify/`](examples/notify/):
+
+- `webhook.sh` posts the JSON to `NOTIFY_WEBHOOK_URL`;
+- `telegram.sh` sends `metagit <project> (<target>): <message>` to the chat `TELEGRAM_CHAT_ID` through the bot `TELEGRAM_BOT_TOKEN`;
+- `email.sh` sends a mail to `NOTIFY_EMAIL_TO` with `sendmail` (`NOTIFY_EMAIL_FROM` and `SENDMAIL` are optional).
+
+`webhook.sh` and `telegram.sh` need `curl`, `email.sh` needs `sendmail`. Each script has a commented line that skips `delivered` if a message on every delivery is too much. The scripts are not in the release archives, take them from the repository:
+
+```sh
+sudo install -d /usr/local/lib/metagit
+sudo curl -fsSLo /usr/local/lib/metagit/telegram.sh \
+    https://raw.githubusercontent.com/ekalinin/metagit/main/examples/notify/telegram.sh
+sudo chmod 0755 /usr/local/lib/metagit/telegram.sh
+```
